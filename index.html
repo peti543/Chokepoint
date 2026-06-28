@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#0b0e11" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="CHOKEPOINT" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<title>CHOKEPOINT</title>
+<style>
+  :root{
+    --bg:#0b0e11; --bg2:#11161b; --panel:#161c23; --panel2:#1d252e;
+    --line:#2a333d; --ink:#e8eef4; --dim:#93a1ad; --dim2:#637180;
+    --accent:#ffb000; --accent2:#ff7a00; --good:#37d67a; --bad:#ff5252;
+    --si:#5ac8fa; --al:#b0bec5; --re:#c792ea; --pw:#ffd34e; --dc:#37d67a;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+    --safe-l:env(safe-area-inset-left,0px); --safe-r:env(safe-area-inset-right,0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overflow-x:hidden;-webkit-text-size-adjust:100%;}
+  body{max-width:560px;margin:0 auto;min-height:100vh;
+    padding-left:var(--safe-l);padding-right:var(--safe-r);
+    background:radial-gradient(1200px 600px at 50% -200px,#16202b 0%,var(--bg) 60%);}
+  button{font-family:inherit;cursor:pointer;border:none;color:inherit;}
+  .nosel{user-select:none;-webkit-user-select:none;}
+
+  /* sticky top */
+  #topbar{position:sticky;top:0;z-index:30;background:rgba(11,14,17,.92);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    padding:calc(var(--safe-t) + 8px) 12px 8px;}
+  .brandrow{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .brand{font-weight:900;letter-spacing:3px;font-size:18px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .brand small{display:block;letter-spacing:1px;font-size:8px;color:var(--dim2);font-weight:700;}
+  .wallet{text-align:right;}
+  .wallet .credits{font-weight:800;font-size:16px;color:var(--accent);}
+  .wallet .dc{font-size:10px;color:var(--dc);font-weight:700;}
+  .pollwrap{margin-top:8px;display:flex;align-items:center;gap:8px;}
+  .pollbar{flex:1;height:14px;border-radius:8px;background:#0c1014;border:1px solid var(--line);overflow:hidden;position:relative;}
+  .pollfill{height:100%;width:0%;background:linear-gradient(90deg,#37d67a,#ffd34e 55%,#ff5252);transition:width .25s;}
+  .polltxt{font-size:9px;color:var(--dim);min-width:96px;text-align:right;font-weight:700;}
+
+  /* hero */
+  .hero{padding:18px 14px 4px;text-align:center;}
+  .hero h1{margin:0;font-size:34px;letter-spacing:6px;font-weight:900;
+    background:linear-gradient(180deg,#fff,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .hero .tag{color:var(--dim);font-size:11px;letter-spacing:1px;margin-top:2px;}
+  .hero .sub{color:var(--dim2);font-size:10px;margin-top:6px;font-style:italic;}
+
+  .statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 12px 4px;}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;}
+  .stat .v{font-weight:800;font-size:14px;}
+  .stat .l{font-size:9px;color:var(--dim2);letter-spacing:.5px;margin-top:2px;text-transform:uppercase;}
+
+  .section{padding:6px 12px;}
+  .sechead{display:flex;align-items:center;gap:8px;margin:14px 2px 8px;}
+  .sechead .dot{width:10px;height:10px;border-radius:3px;}
+  .sechead h2{margin:0;font-size:13px;letter-spacing:2px;font-weight:800;color:var(--ink);text-transform:uppercase;}
+  .sechead .hint{margin-left:auto;font-size:9px;color:var(--dim2);}
+
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+    border-radius:14px;padding:12px;margin-bottom:10px;position:relative;overflow:hidden;}
+  .card.locked{opacity:.62;}
+  .card.soon{opacity:.5;}
+  .card .crow{display:flex;align-items:center;gap:10px;}
+  .ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-size:20px;flex:0 0 38px;background:#0e141a;border:1px solid var(--line);}
+  .cname{font-weight:800;font-size:14px;line-height:1.1;}
+  .ctier{font-size:9px;color:var(--dim2);letter-spacing:.5px;text-transform:uppercase;}
+  .cright{margin-left:auto;text-align:right;}
+  .cstock{font-weight:800;font-size:15px;}
+  .crate{font-size:10px;color:var(--good);font-weight:700;}
+  .crate.zero{color:var(--dim2);}
+  .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .chip{font-size:9px;background:#0e141a;border:1px solid var(--line);color:var(--dim);
+    padding:3px 7px;border-radius:20px;font-weight:600;}
+  .chip b{color:var(--ink);}
+  .flowbar{height:5px;border-radius:4px;background:#0c1014;margin-top:8px;overflow:hidden;}
+  .flowfill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .2s;}
+  .btnrow{display:flex;gap:8px;margin-top:10px;}
+  .btn{flex:1;min-height:48px;border-radius:12px;font-weight:800;font-size:13px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;
+    border:1px solid var(--line);background:var(--panel2);color:var(--ink);transition:transform .05s,filter .1s;}
+  .btn small{font-weight:600;font-size:10px;color:var(--dim);}
+  .btn:active{transform:scale(.97);}
+  .btn.buy{background:linear-gradient(180deg,#243140,#19222c);border-color:#34465a;}
+  .btn.buy.afford{background:linear-gradient(180deg,#2f4a2f,#1d2e1d);border-color:#3d6b3d;}
+  .btn.buy.afford small{color:#bfe9c4;}
+  .btn.buy:disabled{opacity:.5;}
+  .btn.tap{flex:0 0 96px;background:linear-gradient(180deg,var(--accent),var(--accent2));color:#1a1200;border-color:#b87800;}
+  .btn.clean{flex:0 0 96px;background:linear-gradient(180deg,#1c3b3b,#13282a);border-color:#2c5a5a;}
+  .btn.clean small{color:#9fe9e9;}
+  .lockmsg{margin-top:8px;font-size:10px;color:var(--accent);font-weight:700;text-align:center;}
+  .soonmsg{margin-top:6px;font-size:10px;color:var(--dim2);text-align:center;letter-spacing:1px;}
+
+  /* waste control */
+  .wctrl{background:linear-gradient(180deg,#1a1410,#120f0d);border:1px solid #3a2c1c;border-radius:14px;padding:12px;}
+  .wctrl .big{font-size:11px;color:var(--dim);margin-bottom:8px;}
+  .wctrl .big b{color:var(--ink);}
+
+  /* prestige */
+  .prestige{background:linear-gradient(180deg,#241a30,#160f1f);border:1px solid #4a2f6a;border-radius:14px;padding:14px;text-align:center;}
+  .prestige h3{margin:0 0 4px;font-size:14px;letter-spacing:2px;color:var(--re);}
+  .prestige p{font-size:10px;color:var(--dim);margin:4px 0;}
+  .btn.prestige-btn{background:linear-gradient(180deg,#7b3ff0,#5a2db0);color:#fff;border-color:#8b57ff;margin-top:8px;min-height:52px;}
+  .btn.prestige-btn:disabled{opacity:.45;}
+
+  .footer{padding:10px 12px calc(var(--safe-b) + 24px);text-align:center;}
+  .footer .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;}
+  .minibtn{font-size:11px;padding:10px 14px;min-height:44px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--dim);}
+  .footer .note{font-size:9px;color:var(--dim2);line-height:1.5;}
+
+  /* toast */
+  #toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 16px);transform:translateX(-50%) translateY(20px);
+    background:#1d252e;border:1px solid var(--line);color:var(--ink);padding:10px 16px;border-radius:12px;
+    font-size:12px;font-weight:700;opacity:0;transition:.25s;z-index:60;pointer-events:none;max-width:90vw;text-align:center;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* modal */
+  .modal{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.7);display:none;
+    align-items:center;justify-content:center;padding:24px;padding-bottom:calc(24px + var(--safe-b));}
+  .modal.show{display:flex;}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;
+    max-width:420px;width:100%;text-align:center;}
+  .sheet h3{margin:0 0 6px;font-size:18px;letter-spacing:2px;color:var(--accent);}
+  .sheet .away{font-size:13px;color:var(--ink);margin:10px 0;line-height:1.6;}
+  .sheet .gains{text-align:left;background:#0e141a;border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0;font-size:12px;}
+  .sheet .gains div{display:flex;justify-content:space-between;padding:2px 0;}
+  .sheet .gains b{color:var(--good);}
+  .sheet button{margin-top:8px;min-height:48px;width:100%;border-radius:12px;font-weight:800;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));color:#1a1200;font-size:14px;}
+  .sheet .ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line);margin-top:8px;}
+
+  #debug{display:none;padding:10px 12px;}
+  #debug .minibtn{background:#2a1d1d;border-color:#5a2c2c;color:#ffb3b3;}
+</style>
+</head>
+<body class="nosel">
+
+<div id="topbar">
+  <div class="brandrow">
+    <div class="brand">CHOKEPOINT<small>WHO HOLDS REFINING HOLDS EVERYTHING</small></div>
+    <div class="wallet">
+      <div class="credits" id="w-credits">$0</div>
+      <div class="dc" id="w-dc">0 DC capacity</div>
+    </div>
+  </div>
+  <div class="pollwrap">
+    <div class="pollbar"><div class="pollfill" id="pollfill"></div></div>
+    <div class="polltxt" id="polltxt">POLLUTION 0% · EFF 100%</div>
+  </div>
+</div>
+
+<div class="hero">
+  <h1>CHOKEPOINT</h1>
+  <div class="tag">CRITICAL-MINERALS SUPPLY CHAIN · IDLE OPS</div>
+  <div class="sub">Mining is cheap. Refining is the gate.</div>
+</div>
+
+<div class="statgrid">
+  <div class="stat"><div class="v" id="s-income">$0/s</div><div class="l">Net Income</div></div>
+  <div class="stat"><div class="v" id="s-gen">Gen 1</div><div class="l">Fab Generation</div></div>
+  <div class="stat"><div class="v" id="s-mult">×1.00</div><div class="l">Prestige Mult</div></div>
+</div>
+
+<div id="app"></div>
+
+<div class="section">
+  <div class="sechead"><span class="dot" style="background:var(--re)"></span><h2>Fab Generation · Prestige</h2></div>
+  <div class="prestige">
+    <h3>NEW FAB GENERATION</h3>
+    <p>Retool the entire operation. Wipes all stock, machines, lines and pollution — but every datacenter you built this run forges <b>permanent</b> fab credits that compound your output forever.</p>
+    <p id="prestige-info">Build datacenter capacity to unlock.</p>
+    <button class="btn prestige-btn" id="prestige-btn" disabled>RETOOL</button>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="row">
+    <button class="minibtn" id="btn-save">Save now</button>
+    <button class="minibtn" id="btn-export">Export</button>
+    <button class="minibtn" id="btn-import">Import</button>
+    <button class="minibtn" id="btn-wipe">Hard reset</button>
+  </div>
+  <div class="note">CHOKEPOINT runs fully offline. Auto-saves every 10s and when you leave.<br/>Add to Home Screen to install · earnings keep accruing while away (capped 8h).</div>
+  <div id="debug"></div>
+</div>
+
+<div id="toast"></div>
+
+<div class="modal" id="away-modal">
+  <div class="sheet">
+    <h3>WHILE YOU WERE AWAY</h3>
+    <div class="away" id="away-time"></div>
+    <div class="gains" id="away-gains"></div>
+    <button id="away-ok">COLLECT</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   CHOKEPOINT — offline idle/incremental supply-chain game
+   Single self-contained file. No external assets.
+   ============================================================ */
+
+/* ---------- number formatting ---------- */
+const SUF = ['','K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc','Ud','Dd','Td'];
+function fmt(n){
+  if(n===Infinity) return '∞';
+  if(isNaN(n)) return '0';
+  if(n<0) return '-'+fmt(-n);
+  if(n<1000){
+    if(n>=100||n===Math.floor(n)) return Math.floor(n).toString();
+    if(n>=10) return n.toFixed(1);
+    return n.toFixed(2);
+  }
+  let t=Math.floor(Math.log10(n)/3);
+  let s=SUF[t]||('e'+(t*3));
+  let v=n/Math.pow(10,t*3);
+  return (v>=100?v.toFixed(0):v>=10?v.toFixed(1):v.toFixed(2))+s;
+}
+const money = n => '$'+fmt(n);
+
+/* ---------- static design data ---------- */
+// lines: si, al, re, pw, dc, soon
+const LINES = {
+  si:{name:'Silicon', color:'var(--si)'},
+  al:{name:'Aluminium + Gallium', color:'var(--al)'},
+  re:{name:'Rare Earth', color:'var(--re)'},
+  pw:{name:'Power', color:'var(--pw)'},
+  dc:{name:'Datacenter', color:'var(--dc)'},
+  soon:{name:'Coming Soon', color:'var(--dim2)'},
+};
+
+// node: id,name,line,icon,tier
+// inputs: [{id,per}]  output goes to stock[id]
+// rate: output/machine/sec ; cost,mul ; price (sell $/unit, 0=not sold)
+// waste: pollution per unit produced
+// root: true (no input, tappable) ; sellFrac override optional
+// unlock: {credits} or {node:id, amt}
+const NODES = [
+  // ---------------- SILICON ----------------
+  {id:'quartz', line:'si', name:'Quartz Mine', tier:'Mining · high-purity quartz', icon:'⛏️',
+    root:true, rate:1.2, cost:50, mul:1.15, price:1, waste:0.05, unlock:{}},
+  {id:'metsi', line:'si', name:'Carbothermic Furnace', tier:'Refine · metallurgical silicon', icon:'🔥',
+    inputs:[{id:'quartz',per:2}], rate:0.5, cost:300, mul:1.18, price:9, waste:0.6,
+    wasteName:'CO₂ + energy', unlock:{node:'quartz',amt:25}},
+  {id:'poly', line:'si', name:'Siemens Reactor', tier:'Refine · polysilicon', icon:'🧪',
+    inputs:[{id:'metsi',per:2}], rate:0.28, cost:2400, mul:1.18, price:70, waste:1.3,
+    wasteName:'SiCl₄ + energy', unlock:{node:'metsi',amt:25}},
+  {id:'ingot', line:'si', name:'Czochralski Puller', tier:'Refine · monocrystal ingot', icon:'💎',
+    inputs:[{id:'poly',per:3}], rate:0.11, cost:18000, mul:1.19, price:450, waste:2.0,
+    wasteName:'high energy', unlock:{node:'poly',amt:25}},
+  {id:'wafer', line:'si', name:'Wafer Slicer', tier:'Fab · polished wafer', icon:'🥞',
+    inputs:[{id:'ingot',per:1}], rate:0.09, cost:140000, mul:1.19, price:2800, waste:1.0,
+    wasteName:'slurry + acid', unlock:{node:'ingot',amt:20}},
+  {id:'chip', line:'si', name:'Chip Fab', tier:'Fab · finished chip (needs gallium)', icon:'🔲',
+    inputs:[{id:'wafer',per:2},{id:'gallium',per:0.5}], rate:0.06, cost:1.3e6, mul:1.20, price:24000, waste:0.5,
+    wasteName:'solvents', unlock:{node:'wafer',amt:20}},
+
+  // ---------------- ALUMINIUM + GALLIUM ----------------
+  {id:'bauxite', line:'al', name:'Bauxite Mine', tier:'Mining · bauxite ore', icon:'🪨',
+    root:true, rate:1.2, cost:300, mul:1.15, price:1, waste:0.1, unlock:{node:'metsi',amt:10}},
+  {id:'alumina', line:'al', name:'Bayer Process', tier:'Refine · alumina', icon:'⚗️',
+    inputs:[{id:'bauxite',per:2}], rate:0.5, cost:1500, mul:1.18, price:8, waste:1.4,
+    wasteName:'red mud tailings', unlock:{node:'bauxite',amt:25}},
+  {id:'aluminium', line:'al', name:'Hall–Héroult Smelter', tier:'Refine · aluminium (gallium byproduct)', icon:'🛢️',
+    inputs:[{id:'alumina',per:2}], rate:0.32, cost:11000, mul:1.18, price:50, waste:2.0,
+    wasteName:'CO₂ + energy', byproduct:{id:'gallium',yield:0.18}, unlock:{node:'alumina',amt:20}},
+
+  // ---------------- RARE EARTH ----------------
+  {id:'reeore', line:'re', name:'REE Ore Mine', tier:'Mining · rare-earth ore', icon:'⛰️',
+    root:true, rate:0.9, cost:2000, mul:1.16, price:2, waste:0.2, unlock:{node:'poly',amt:10}},
+  {id:'leach', line:'re', name:'Crack & Leach', tier:'Refine · pregnant leachate', icon:'🧴',
+    inputs:[{id:'reeore',per:2}], rate:0.42, cost:9000, mul:1.19, price:14, waste:3.0,
+    wasteName:'acid + radioactive', unlock:{node:'reeore',amt:20}},
+  {id:'sx', line:'re', name:'Solvent Extraction', tier:'⚠ THE CHOKEPOINT · separation', icon:'🌡️',
+    inputs:[{id:'leach',per:3}], rate:0.05, cost:160000, mul:1.21, price:220, waste:8.0,
+    wasteName:'radioactive residue + acid', unlock:{node:'leach',amt:25}},
+  {id:'oxide', line:'re', name:'Calcination', tier:'Refine · separated oxides', icon:'🧱',
+    inputs:[{id:'sx',per:1}], rate:0.2, cost:1.6e6, mul:1.20, price:1400, waste:1.0,
+    wasteName:'flue gas', unlock:{node:'sx',amt:15}},
+  {id:'remetal', line:'re', name:'Molten-Salt Reduction', tier:'Refine · rare-earth metals', icon:'🔩',
+    inputs:[{id:'oxide',per:1.5}], rate:0.15, cost:1.6e7, mul:1.21, price:8000, waste:0.6,
+    wasteName:'fluoride slag', unlock:{node:'oxide',amt:15}},
+  {id:'magnet', line:'re', name:'NdFeB Magnet Plant', tier:'Fab · sintered magnets', icon:'🧲',
+    inputs:[{id:'remetal',per:2}], rate:0.1, cost:1.6e8, mul:1.22, price:48000, waste:0.3,
+    wasteName:'grinding swarf', unlock:{node:'remetal',amt:12}},
+
+  // ---------------- POWER ----------------
+  {id:'power', line:'pw', name:'Power Plant', tier:'Generation · electricity', icon:'⚡',
+    root:true, rate:1.5, cost:6000, mul:1.16, price:0, waste:0.8,
+    wasteName:'CO₂', unlock:{node:'metsi',amt:30}},
+
+  // ---------------- DATACENTER (final sink) ----------------
+  {id:'datacenter', line:'dc', name:'Datacenter', tier:'Top sink · AI compute capacity', icon:'🏢',
+    inputs:[{id:'chip',per:1},{id:'magnet',per:1},{id:'power',per:5}], rate:0.03, cost:5e7, mul:1.25,
+    price:600000, waste:0, isDC:true, unlock:{node:'chip',amt:5}},
+
+  // ---------------- COMING SOON STUBS ----------------
+  {id:'zinc', line:'soon', name:'Zinc + Germanium', tier:'Byproduct line', icon:'🔋', soon:true},
+  {id:'graphite', line:'soon', name:'Graphite Anode', tier:'Battery materials', icon:'⚫', soon:true},
+  {id:'antimony', line:'soon', name:'Antimony', tier:'Flame-retardant / alloys', icon:'🔬', soon:true},
+];
+const NODEMAP = {};
+NODES.forEach(n=>NODEMAP[n.id]=n);
+// resource display names (includes non-node byproduct resources like gallium)
+const RESNAME = {gallium:'Gallium'};
+NODES.forEach(n=>RESNAME[n.id]=n.name);
+function resShort(id){ return (RESNAME[id]||id).split(' ')[0]; }
+// who consumes each resource (for surplus-aware selling)
+const CONSUMERS = {};
+NODES.forEach(n=>(n.inputs||[]).forEach(inp=>{(CONSUMERS[inp.id]=CONSUMERS[inp.id]||[]).push(n.id);}));
+
+/* ---------- balance constants ---------- */
+const SELL_FRAC = 0.5;        // fraction of surplus stock sold per second
+const POLL_CAP_BASE = 1000;
+const OFFLINE_CAP = 8*3600;   // seconds
+const PRESTIGE_SCALE = 1;     // pp = floor( runDC ^ 0.55 )
+const PRESTIGE_EXP = 0.55;
+const PRESTIGE_PER_POINT = 0.25; // +25% per fab credit
+
+/* ---------- state ---------- */
+function freshState(){
+  const s = {
+    v:1, credits:0, lastSave:Date.now(),
+    pollution:0, remediationLvl:0, greenLvl:0,
+    tapLvl:0,
+    totalPP:0, gen:1, runDC:0,
+    nodes:{}, stock:{}, unlocked:{}, produced:{},
+  };
+  NODES.forEach(n=>{ s.nodes[n.id]=0; s.stock[n.id]=0; s.produced[n.id]=0; });
+  s.stock['gallium']=0; s.produced['gallium']=0; // byproduct resource (not a node)
+  s.unlocked['quartz']=true;
+  return s;
+}
+let S = freshState();
+
+/* derived helpers */
+function tapPower(){ return Math.pow(1.6, S.tapLvl) * (1 + S.tapLvl*0.2); }
+function tapCost(){ return Math.floor(10 * Math.pow(1.9, S.tapLvl)); }
+function pollCap(){ return POLL_CAP_BASE * (1 + S.remediationLvl*0.5); }
+function remediationRate(){ return S.remediationLvl===0?0: (POLL_CAP_BASE*0.02) * Math.pow(1.4,S.remediationLvl-1); }
+function remediationCost(){ return Math.floor(2000 * Math.pow(2.2, S.remediationLvl)); }
+function greenCost(){ return Math.floor(5000 * Math.pow(2.6, S.greenLvl)); }
+function wasteFactor(){ return Math.pow(0.78, S.greenLvl); } // green refit cuts all waste
+function prestigeMult(){ return 1 + PRESTIGE_PER_POINT * S.totalPP; }
+function efficiency(){ const r = S.pollution/pollCap(); return Math.max(0.15, 1 - 0.7*Math.min(1,r)); }
+function nodeCost(n){ return Math.floor(NODEMAP[n].cost * Math.pow(NODEMAP[n].mul, S.nodes[n])); }
+function ppGain(){ return Math.floor(Math.pow(Math.max(0,S.runDC), PRESTIGE_EXP) / PRESTIGE_SCALE); }
+
+/* ---------- core simulation tick ---------- */
+function tick(dt){
+  const eff = efficiency();
+  const gm = prestigeMult();
+  const wf = wasteFactor();
+  // production / consumption pass (chain order = NODES order)
+  for(const n of NODES){
+    if(n.soon || !S.unlocked[n.id]) continue;
+    const machines = S.nodes[n.id];
+    if(machines<=0) continue;
+    let cap = machines * n.rate * gm * eff * dt;
+    let produce = cap;
+    if(n.inputs){
+      let limit = Infinity;
+      for(const inp of n.inputs){
+        limit = Math.min(limit, S.stock[inp.id]/inp.per);
+      }
+      produce = Math.min(cap, Math.max(0,limit));
+      for(const inp of n.inputs){ S.stock[inp.id] -= produce*inp.per; }
+    }
+    if(produce<=0) continue;
+    S.stock[n.id] += produce;
+    S.produced[n.id] += produce;
+    if(n.byproduct){ S.stock[n.byproduct.id] += produce * n.byproduct.yield; S.produced[n.byproduct.id]+= produce*n.byproduct.yield; }
+    if(n.isDC){ S.runDC += produce; }
+    if(n.waste){ S.pollution += produce * n.waste * wf; }
+  }
+  // remediation
+  if(S.remediationLvl>0){ S.pollution = Math.max(0, S.pollution - remediationRate()*dt); }
+  S.pollution = Math.max(0, Math.min(S.pollution, pollCap()*1.05));
+  // selling pass: sell surplus (stock not immediately needed downstream)
+  let income = 0;
+  for(const n of NODES){
+    if(n.soon) continue;
+    if(!n.price) continue;
+    const st = S.stock[n.id];
+    if(st<=0) continue;
+    const sell = Math.min(st, st*SELL_FRAC*dt);
+    S.stock[n.id] -= sell;
+    income += sell * n.price * gm;
+  }
+  S.credits += income;
+  return income/dt; // $/s
+}
+
+/* unlock check */
+function checkUnlocks(){
+  let changed=false;
+  for(const n of NODES){
+    if(n.soon || S.unlocked[n.id]) continue;
+    const u=n.unlock||{};
+    let ok=true;
+    if(u.node){ ok = ok && (S.produced[u.node]||0) >= u.amt; }
+    if(u.credits){ ok = ok && S.credits >= u.credits; }
+    if(ok){ S.unlocked[n.id]=true; changed=true; toast('UNLOCKED: '+n.name); }
+  }
+  return changed;
+}
+
+/* ---------- actions ---------- */
+function doTap(id){
+  const n=NODEMAP[id];
+  if(!n.root || !S.unlocked[id]) return;
+  const amt = tapPower();
+  S.stock[id]+=amt; S.produced[id]+=amt;
+  if(n.waste) S.pollution += amt*n.waste*wasteFactor();
+  spawnPop(id, '+'+fmt(amt));
+}
+function buyNode(id){
+  const c=nodeCost(id);
+  if(S.credits<c) return false;
+  S.credits-=c; S.nodes[id]++; renderDirty=true; return true;
+}
+function buyTap(){ const c=tapCost(); if(S.credits<c) return; S.credits-=c; S.tapLvl++; renderDirty=true; }
+function buyRemediation(){ const c=remediationCost(); if(S.credits<c) return; S.credits-=c; S.remediationLvl++; renderDirty=true; toast('Treatment capacity expanded'); }
+function buyGreen(){ const c=greenCost(); if(S.credits<c) return; S.credits-=c; S.greenLvl++; renderDirty=true; toast('Green refit installed — waste cut'); }
+
+function doPrestige(){
+  const g=ppGain();
+  if(g<1) return;
+  S.totalPP += g;
+  const gen = S.gen+1;
+  const totalPP=S.totalPP;
+  S = freshState();
+  S.totalPP=totalPP; S.gen=gen;
+  toast('FAB GEN '+gen+' · +'+g+' fab credits');
+  renderAll(); save();
+}
+
+/* ---------- offline progress ---------- */
+function applyOffline(){
+  const now=Date.now();
+  let elapsed=(now - (S.lastSave||now))/1000;
+  if(elapsed<5) return null;
+  elapsed=Math.min(elapsed, OFFLINE_CAP);
+  const before={credits:S.credits, dc:S.runDC};
+  const STEPS=600;
+  const dt=elapsed/STEPS;
+  for(let i=0;i<STEPS;i++){ tick(dt); }
+  checkUnlocks();
+  const gained={
+    credits:S.credits-before.credits,
+    dc:S.runDC-before.dc,
+    seconds:elapsed
+  };
+  return gained;
+}
+
+/* ---------- persistence ---------- */
+const KEY='chokepoint.save.v1';
+function save(){ S.lastSave=Date.now(); try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(!raw) return false;
+    const data=JSON.parse(raw);
+    const base=freshState();
+    // merge to be resilient to added nodes
+    S=Object.assign(base, data);
+    NODES.forEach(n=>{
+      if(S.nodes[n.id]==null) S.nodes[n.id]=0;
+      if(S.stock[n.id]==null) S.stock[n.id]=0;
+      if(S.produced[n.id]==null) S.produced[n.id]=0;
+    });
+    if(S.stock['gallium']==null) S.stock['gallium']=0;
+    if(S.produced['gallium']==null) S.produced['gallium']=0;
+    S.unlocked = Object.assign({quartz:true}, data.unlocked||{});
+    return true;
+  }catch(e){ return false; }
+}
+
+/* ---------- rendering ---------- */
+const app=document.getElementById('app');
+let renderDirty=true;
+let built=false;
+const el={}; // cache per-node elements
+
+function lineOrder(){ return ['si','al','re','pw','dc','soon']; }
+
+function buildSkeleton(){
+  app.innerHTML='';
+  // Waste control section first (pinned meter is in topbar; controls here near top)
+  const wsec=document.createElement('div'); wsec.className='section';
+  wsec.innerHTML = `
+    <div class="sechead"><span class="dot" style="background:var(--bad)"></span><h2>Waste Control</h2><span class="hint" id="waste-hint"></span></div>
+    <div class="wctrl">
+      <div class="big" id="waste-summary"></div>
+      <div class="btnrow">
+        <button class="btn buy" id="btn-remediation"><span>Treatment Plant</span><small id="rem-cost"></small></button>
+        <button class="btn buy" id="btn-green"><span>Green Refit</span><small id="green-cost"></small></button>
+      </div>
+    </div>`;
+  app.appendChild(wsec);
+
+  // Tap booster card (drill power)
+  const tsec=document.createElement('div'); tsec.className='section';
+  tsec.innerHTML = `
+    <div class="sechead"><span class="dot" style="background:var(--accent)"></span><h2>Extraction Crew</h2></div>
+    <div class="card">
+      <div class="crow">
+        <div class="ico">👷</div>
+        <div><div class="cname">Drill Power</div><div class="ctier">Boost every manual tap on mining nodes</div></div>
+        <div class="cright"><div class="cstock" id="tap-power"></div><div class="crate">per tap</div></div>
+      </div>
+      <div class="btnrow"><button class="btn buy" id="btn-tap"><span>Upgrade Drill</span><small id="tap-cost"></small></button></div>
+    </div>`;
+  app.appendChild(tsec);
+
+  // node sections by line
+  for(const lk of lineOrder()){
+    const sec=document.createElement('div'); sec.className='section'; sec.id='sec-'+lk;
+    const li=LINES[lk];
+    sec.innerHTML=`<div class="sechead"><span class="dot" style="background:${li.color}"></span><h2>${li.name}</h2><span class="hint" id="hint-${lk}"></span></div>`;
+    const list=document.createElement('div'); list.id='list-'+lk;
+    sec.appendChild(list); app.appendChild(sec);
+    NODES.filter(n=>n.line===lk).forEach(n=>{
+      const card=document.createElement('div'); card.className='card'; card.id='card-'+n.id;
+      list.appendChild(card);
+      el[n.id]={card};
+    });
+  }
+  built=true;
+  bindStatic();
+  renderAll();
+}
+
+function bindStatic(){
+  document.getElementById('btn-tap').onclick=buyTap;
+  document.getElementById('btn-remediation').onclick=buyRemediation;
+  document.getElementById('btn-green').onclick=buyGreen;
+  document.getElementById('prestige-btn').onclick=()=>{
+    if(ppGain()<1) return;
+    if(confirm('Retool to Fab Gen '+(S.gen+1)+'?\nThis WIPES all progress this run and grants +'+ppGain()+' permanent fab credits (×'+ (1+PRESTIGE_PER_POINT*(S.totalPP+ppGain())).toFixed(2)+' total mult).')) doPrestige();
+  };
+  document.getElementById('btn-save').onclick=()=>{save();toast('Saved');};
+  document.getElementById('btn-wipe').onclick=()=>{ if(confirm('Hard reset? This erases EVERYTHING including fab generations.')){ localStorage.removeItem(KEY); S=freshState(); renderAll(); toast('Wiped'); } };
+  document.getElementById('btn-export').onclick=()=>{ save(); const txt=btoa(unescape(encodeURIComponent(JSON.stringify(S)))); prompt('Copy your save code:', txt); };
+  document.getElementById('btn-import').onclick=()=>{ const t=prompt('Paste save code:'); if(!t) return; try{ const d=JSON.parse(decodeURIComponent(escape(atob(t.trim())))); localStorage.setItem(KEY, JSON.stringify(d)); load(); renderAll(); toast('Imported'); }catch(e){ toast('Invalid save code'); } };
+}
+
+function buildCard(n){
+  const c=el[n.id].card;
+  if(n.soon){
+    c.className='card soon';
+    c.innerHTML=`<div class="crow"><div class="ico">${n.icon}</div>
+      <div><div class="cname">${n.name}</div><div class="ctier">${n.tier}</div></div></div>
+      <div class="soonmsg">🔒 COMING SOON</div>`;
+    el[n.id].built='soon';
+    return;
+  }
+  const inputsTxt = (n.inputs||[]).map(i=>`<span class="chip">in: <b>${i.per}</b> ${resShort(i.id)}</span>`).join('');
+  const priceTxt = n.price?`<span class="chip">sell <b>${money(n.price)}</b></span>`:'';
+  const byTxt = n.byproduct?`<span class="chip" style="color:var(--si)">+gallium byproduct</span>`:'';
+  const wasteTxt = n.waste?`<span class="chip" style="color:#ff9b6b">waste: ${n.wasteName||'tailings'}</span>`:'';
+  c.innerHTML=`
+    <div class="crow">
+      <div class="ico">${n.icon}</div>
+      <div style="min-width:0">
+        <div class="cname">${n.name}</div>
+        <div class="ctier">${n.tier}</div>
+      </div>
+      <div class="cright">
+        <div class="cstock" id="st-${n.id}">0</div>
+        <div class="crate" id="rt-${n.id}">idle</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="chip">machines: <b id="cnt-${n.id}">0</b></span>
+      ${inputsTxt}${priceTxt}${byTxt}${wasteTxt}
+    </div>
+    <div class="flowbar"><div class="flowfill" id="fl-${n.id}"></div></div>
+    <div class="btnrow" id="row-${n.id}"></div>
+    <div class="lockmsg" id="lock-${n.id}" style="display:none"></div>`;
+  // build button row
+  const row=c.querySelector('#row-'+n.id);
+  if(n.root){
+    const tap=document.createElement('button'); tap.className='btn tap'; tap.id='tap-'+n.id;
+    tap.innerHTML='TAP<small>extract</small>';
+    const press=(e)=>{e.preventDefault(); doTap(n.id);};
+    tap.addEventListener('click',press);
+    row.appendChild(tap);
+  }
+  const buy=document.createElement('button'); buy.className='btn buy'; buy.id='buy-'+n.id;
+  buy.innerHTML=`<span>Build machine</span><small id="bc-${n.id}"></small>`;
+  buy.onclick=()=>{ if(buyNode(n.id)) {} };
+  row.appendChild(buy);
+  el[n.id].built='full';
+  // cache refs
+  el[n.id].st=c.querySelector('#st-'+n.id);
+  el[n.id].rt=c.querySelector('#rt-'+n.id);
+  el[n.id].cnt=c.querySelector('#cnt-'+n.id);
+  el[n.id].fl=c.querySelector('#fl-'+n.id);
+  el[n.id].buy=buy;
+  el[n.id].bc=c.querySelector('#bc-'+n.id);
+  el[n.id].lock=c.querySelector('#lock-'+n.id);
+}
+
+function buildLocked(n){
+  const c=el[n.id].card;
+  c.className='card locked';
+  c.innerHTML=`
+    <div class="crow"><div class="ico">${n.icon}</div>
+      <div><div class="cname">${n.name}</div><div class="ctier">${n.tier}</div></div></div>
+    <div class="lockmsg" id="lock-${n.id}"></div>`;
+  el[n.id].built='locked';
+  el[n.id].lock=c.querySelector('#lock-'+n.id);
+}
+
+function unlockReqText(n){
+  const u=n.unlock||{};
+  if(u.node){
+    const have=Math.floor(S.produced[u.node]||0);
+    return `🔒 Produce ${u.amt} ${resShort(u.node)} (${have}/${u.amt})`;
+  }
+  if(u.credits){ return `🔒 Reach ${money(u.credits)}`; }
+  return '🔒 Locked';
+}
+
+function renderAll(){
+  if(!built){ buildSkeleton(); return; }
+  for(const n of NODES){
+    if(n.soon){ if(el[n.id].built!=='soon') buildCard(n); continue; }
+    const want = S.unlocked[n.id] ? 'full' : 'locked';
+    if(el[n.id].built!==want){ if(want==='full') buildCard(n); else buildLocked(n); }
+  }
+  updateUI();
+}
+
+/* per-frame light update */
+let lastRate=0;
+function updateUI(){
+  // wallet
+  document.getElementById('w-credits').textContent=money(S.credits);
+  document.getElementById('w-dc').textContent=fmt(S.stock['datacenter'])+' DC capacity';
+  document.getElementById('s-income').textContent=money(lastRate)+'/s';
+  document.getElementById('s-gen').textContent='Gen '+S.gen;
+  document.getElementById('s-mult').textContent='×'+prestigeMult().toFixed(2);
+  // pollution bar
+  const pr=Math.min(1,S.pollution/pollCap());
+  document.getElementById('pollfill').style.width=(pr*100).toFixed(1)+'%';
+  document.getElementById('polltxt').textContent='POLLUTION '+(pr*100).toFixed(0)+'% · EFF '+(efficiency()*100).toFixed(0)+'%';
+  // waste section
+  const ws=document.getElementById('waste-summary');
+  if(ws){
+    ws.innerHTML=`Pollution <b>${fmt(S.pollution)}</b> / ${fmt(pollCap())} · efficiency <b style="color:${efficiency()<0.6?'var(--bad)':'var(--good)'}">${(efficiency()*100).toFixed(0)}%</b><br/>`+
+      `Treatment removes <b>${fmt(remediationRate())}</b>/s · Green refit cuts waste to <b>${(wasteFactor()*100).toFixed(0)}%</b>`;
+    setBuy(document.getElementById('btn-remediation'),'rem-cost',remediationCost(),'Lvl '+S.remediationLvl);
+    setBuy(document.getElementById('btn-green'),'green-cost',greenCost(),'Lvl '+S.greenLvl);
+  }
+  // tap
+  document.getElementById('tap-power').textContent='+'+fmt(tapPower());
+  setBuy(document.getElementById('btn-tap'),'tap-cost',tapCost(),'Lvl '+S.tapLvl);
+
+  // nodes
+  for(const n of NODES){
+    if(n.soon) continue;
+    const e=el[n.id];
+    if(e.built==='locked'){ if(e.lock) e.lock.textContent=unlockReqText(n); continue; }
+    if(e.built!=='full') continue;
+    e.st.textContent=fmt(S.stock[n.id]);
+    e.cnt.textContent=fmt(S.nodes[n.id]);
+    // estimated rate
+    const eff=efficiency(), gm=prestigeMult();
+    let rate = S.nodes[n.id]*n.rate*gm*eff;
+    let throttled=false;
+    if(n.inputs && S.nodes[n.id]>0){
+      // crude: throttled if any input stock ~empty and no producer surplus
+      for(const inp of n.inputs){ if(S.stock[inp.id] < rate*inp.per*0.2) throttled=true; }
+    }
+    if(S.nodes[n.id]<=0){ e.rt.textContent='idle'; e.rt.className='crate zero'; }
+    else { e.rt.textContent=fmt(rate)+'/s'+(throttled?' ⚠':''); e.rt.className='crate'+(throttled?' zero':''); }
+    const c=nodeCost(n.id);
+    const aff=S.credits>=c;
+    setBuy(e.buy,'bc-'+n.id,c, n.root?'Auto-miner':'Refiner');
+    e.buy.classList.toggle('afford',aff);
+    e.buy.disabled=!aff;
+    // flow bar = input fill ratio (visual)
+    if(n.inputs){
+      let f=1;
+      for(const inp of n.inputs){ f=Math.min(f, S.stock[inp.id]/(inp.per*Math.max(1,S.nodes[n.id]*n.rate))); }
+      e.fl.style.width=(Math.max(0,Math.min(1,f))*100).toFixed(0)+'%';
+    } else { e.fl.style.width='100%'; }
+  }
+  // line hints (next unlock)
+  for(const lk of lineOrder()){
+    const h=document.getElementById('hint-'+lk); if(!h) continue;
+    const next=NODES.find(n=>n.line===lk && !n.soon && !S.unlocked[n.id]);
+    h.textContent = next? ('next: '+next.name) : '';
+  }
+  // prestige
+  const g=ppGain();
+  const pinfo=document.getElementById('prestige-info');
+  const pbtn=document.getElementById('prestige-btn');
+  if(g>=1){
+    pinfo.innerHTML=`Retool now for <b style="color:var(--re)">+${g}</b> fab credits → permanent <b>×${(1+PRESTIGE_PER_POINT*(S.totalPP+g)).toFixed(2)}</b> output.`;
+    pbtn.disabled=false; pbtn.textContent='RETOOL · +'+g+' FAB CREDITS';
+  } else {
+    const need=Math.ceil(Math.pow((S.totalPP>=0?1:1),1)); // placeholder
+    pinfo.innerHTML=`Datacenter capacity built this run: <b>${fmt(S.runDC)}</b>. Build more compute to earn fab credits.`;
+    pbtn.disabled=true; pbtn.textContent='RETOOL';
+  }
+}
+
+function setBuy(btn,costId,cost,label){
+  if(!btn) return;
+  const small=document.getElementById(costId)||btn.querySelector('small');
+  if(small) small.textContent=money(cost)+(label?' · '+label:'');
+  const aff=S.credits>=cost;
+  btn.classList.toggle('afford',aff);
+  if(btn.id && btn.id.startsWith('buy-')) btn.disabled=!aff;
+}
+
+/* ---------- tap pop animation ---------- */
+function spawnPop(id,txt){
+  const card=el[id]&&el[id].card; if(!card) return;
+  const p=document.createElement('div');
+  p.textContent=txt;
+  p.style.cssText='position:absolute;right:14px;top:14px;color:var(--accent);font-weight:800;font-size:13px;pointer-events:none;transition:.6s;opacity:1;transform:translateY(0)';
+  card.appendChild(p);
+  requestAnimationFrame(()=>{ p.style.opacity='0'; p.style.transform='translateY(-26px)'; });
+  setTimeout(()=>p.remove(),600);
+}
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+/* ---------- main loop ---------- */
+let last=performance.now();
+let acc=0, uiAcc=0, saveAcc=0;
+function loop(now){
+  let dt=(now-last)/1000; last=now;
+  if(dt>1) dt=1; // tab throttle guard (offline handled separately)
+  lastRate = tick(dt);
+  acc+=dt; uiAcc+=dt; saveAcc+=dt;
+  if(acc>=0.5){ if(checkUnlocks()) renderAll(); acc=0; }
+  if(uiAcc>=0.1){ updateUI(); uiAcc=0; }
+  if(saveAcc>=10){ save(); saveAcc=0; }
+  requestAnimationFrame(loop);
+}
+
+/* ---------- away modal ---------- */
+function showAway(g){
+  const fmtTime=(s)=>{ s=Math.floor(s); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return (h?h+'h ':'')+m+'m'; };
+  document.getElementById('away-time').innerHTML=`You were away <b>${fmtTime(g.seconds)}</b>. The refineries kept running.`;
+  let rows=`<div><span>Credits earned</span><b>${money(g.credits)}</b></div>`;
+  if(g.dc>0.001) rows+=`<div><span>Datacenter capacity</span><b>+${fmt(g.dc)}</b></div>`;
+  document.getElementById('away-gains').innerHTML=rows;
+  const m=document.getElementById('away-modal'); m.classList.add('show');
+  document.getElementById('away-ok').onclick=()=>m.classList.remove('show');
+}
+
+/* ---------- debug (only via #debug) ---------- */
+function initDebug(){
+  if(location.hash!=='#debug') return;
+  const d=document.getElementById('debug'); d.style.display='block';
+  d.innerHTML='<div style="font-size:9px;color:var(--dim2);margin-bottom:6px">DEBUG</div>';
+  const mk=(t,fn)=>{const b=document.createElement('button');b.className='minibtn';b.textContent=t;b.onclick=fn;d.appendChild(b);};
+  mk('+$1M',()=>{S.credits+=1e6;updateUI();});
+  mk('+$1B',()=>{S.credits+=1e9;updateUI();});
+  mk('+1h offline',()=>{const before=S.credits;const dt=3600/600;for(let i=0;i<600;i++)tick(dt);checkUnlocks();renderAll();toast('+'+money(S.credits-before));});
+  mk('+100 runDC',()=>{S.runDC+=100;updateUI();});
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  const loaded=load();
+  let away=null;
+  if(loaded){ away=applyOffline(); }
+  buildSkeleton();
+  initDebug();
+  if(away && away.credits>0.01){ showAway(away); }
+  // persistence on leave
+  const persist=()=>save();
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) persist(); });
+  window.addEventListener('pagehide',persist);
+  window.addEventListener('beforeunload',persist);
+  requestAnimationFrame(loop);
+}
+boot();
+
+/* ---------- service worker (PWA, best-effort) ---------- */
+if('serviceWorker' in navigator && (location.protocol==='https:'||location.protocol==='http:')){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
