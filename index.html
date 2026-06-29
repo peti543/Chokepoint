@@ -228,7 +228,7 @@
 <script>
 "use strict";
 /* ============================================================
-   CHOKEPOINT — offline idle/incremental supply-chain game
+   CHOKEPOINT: offline idle/incremental supply-chain game
    Single self-contained file. No external assets.
    ============================================================ */
 
@@ -453,7 +453,7 @@ function buyNode(id){
 }
 function buyTap(){ const c=tapCost(); if(S.credits<c) return; S.credits-=c; S.tapLvl++; renderDirty=true; }
 function buyRemediation(){ const c=remediationCost(); if(S.credits<c) return; S.credits-=c; S.remediationLvl++; renderDirty=true; toast('Treatment capacity expanded'); }
-function buyGreen(){ const c=greenCost(); if(S.credits<c) return; S.credits-=c; S.greenLvl++; renderDirty=true; toast('Green refit installed — waste cut'); }
+function buyGreen(){ const c=greenCost(); if(S.credits<c) return; S.credits-=c; S.greenLvl++; renderDirty=true; toast('Green refit installed, waste cut'); }
 
 function doPrestige(){
   const g=ppGain();
@@ -653,7 +653,7 @@ function buildSkeleton(){
   psec.innerHTML=`
     <div class="prestige">
       <h3>NEW FAB GENERATION</h3>
-      <p>Retool the entire operation. Wipes all stock, machines, lines and pollution — but every datacenter you built this run forges <b>permanent</b> fab credits that compound your output forever.</p>
+      <p>Retool the entire operation. Wipes all stock, machines, lines and pollution, but every datacenter you built this run forges <b>permanent</b> fab credits that compound your output forever.</p>
       <p id="prestige-info">Build datacenter capacity to unlock.</p>
       <button class="btn prestige-btn" id="prestige-btn" disabled>RETOOL</button>
     </div>`;
