@@ -140,6 +140,51 @@
 
   #debug{display:none;padding:10px 12px;}
   #debug .minibtn{background:#2a1d1d;border-color:#5a2c2c;color:#ffb3b3;}
+
+  /* views + navigation */
+  #screen{padding-bottom:8px;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .viewhead{display:flex;align-items:center;gap:10px;padding:12px 12px 2px;}
+  .backbtn{width:44px;height:44px;border-radius:12px;background:var(--panel);border:1px solid var(--line);
+    color:var(--ink);font-size:22px;display:flex;align-items:center;justify-content:center;flex:0 0 44px;}
+  .backbtn:active{transform:scale(.95);}
+  .viewhead h2{margin:0;font-size:19px;letter-spacing:1px;font-weight:800;}
+  .vhint{margin-left:auto;font-size:11px;color:var(--accent);font-weight:700;text-align:right;max-width:46%;}
+
+  /* home dashboard */
+  .dash{padding:6px 12px 0;}
+  .dashmain{background:linear-gradient(180deg,#1a2330,#11171f);border:1px solid var(--line);
+    border-radius:16px;padding:16px;text-align:center;margin-bottom:10px;}
+  .dlabel{font-size:11px;letter-spacing:2px;color:var(--dim2);font-weight:700;}
+  .dcredits{font-size:34px;font-weight:900;color:var(--accent);line-height:1.1;margin:3px 0;}
+  .dincome{font-size:15px;color:var(--good);font-weight:800;}
+
+  /* home launcher grid */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .navcard{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+    border-radius:14px;padding:14px 10px;text-align:center;color:var(--ink);min-height:100px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;}
+  .navcard:active{transform:scale(.97);}
+  .ncico{font-size:30px;line-height:1;}
+  .ncname{font-size:13px;font-weight:800;line-height:1.15;}
+  .ncsub{font-size:10px;color:var(--dim2);font-weight:700;}
+
+  /* tap grid on home */
+  .tapgrid{display:flex;gap:8px;flex-wrap:wrap;}
+  .homtap{flex:1;min-width:92px;flex-direction:column;gap:2px;}
+  .homtap span{font-size:12px;}
+  .homtap small{color:#5a3f00;font-weight:700;}
+
+  /* bottom nav */
+  #bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;
+    background:rgba(13,17,21,.97);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    padding-bottom:var(--safe-b);max-width:560px;margin:0 auto;}
+  .navbtn{flex:1;min-height:56px;background:none;color:var(--dim2);font-size:21px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 0;}
+  .navbtn span{font-size:9px;font-weight:700;letter-spacing:.2px;}
+  .navbtn.on{color:var(--accent);}
+  body{padding-bottom:calc(60px + var(--safe-b));}
 </style>
 </head>
 <body class="nosel">
@@ -158,40 +203,16 @@
   </div>
 </div>
 
-<div class="hero">
-  <h1>CHOKEPOINT</h1>
-  <div class="tag">CRITICAL-MINERALS SUPPLY CHAIN · IDLE OPS</div>
-  <div class="sub">Mining is cheap. Refining is the gate.</div>
-</div>
+<div id="screen"></div>
 
-<div class="statgrid">
-  <div class="stat"><div class="v" id="s-income">$0/s</div><div class="l">Net Income</div></div>
-  <div class="stat"><div class="v" id="s-gen">Gen 1</div><div class="l">Fab Generation</div></div>
-  <div class="stat"><div class="v" id="s-mult">×1.00</div><div class="l">Prestige Mult</div></div>
-</div>
-
-<div id="app"></div>
-
-<div class="section">
-  <div class="sechead"><span class="dot" style="background:var(--re)"></span><h2>Fab Generation · Prestige</h2></div>
-  <div class="prestige">
-    <h3>NEW FAB GENERATION</h3>
-    <p>Retool the entire operation. Wipes all stock, machines, lines and pollution — but every datacenter you built this run forges <b>permanent</b> fab credits that compound your output forever.</p>
-    <p id="prestige-info">Build datacenter capacity to unlock.</p>
-    <button class="btn prestige-btn" id="prestige-btn" disabled>RETOOL</button>
-  </div>
-</div>
-
-<div class="footer">
-  <div class="row">
-    <button class="minibtn" id="btn-save">Save now</button>
-    <button class="minibtn" id="btn-export">Export</button>
-    <button class="minibtn" id="btn-import">Import</button>
-    <button class="minibtn" id="btn-wipe">Hard reset</button>
-  </div>
-  <div class="note">CHOKEPOINT runs fully offline. Auto-saves every 10s and when you leave.<br/>Add to Home Screen to install · earnings keep accruing while away (capped 8h).</div>
-  <div id="debug"></div>
-</div>
+<nav id="bottomnav">
+  <button class="navbtn" data-view="home">🏠<span>Home</span></button>
+  <button class="navbtn" data-view="si">🔲<span>Silicon</span></button>
+  <button class="navbtn" data-view="al">🛢️<span>Alu</span></button>
+  <button class="navbtn" data-view="re">🧲<span>Rare E</span></button>
+  <button class="navbtn" data-view="pw">⚡<span>Power</span></button>
+  <button class="navbtn" data-view="waste">♻️<span>Waste</span></button>
+</nav>
 
 <div id="toast"></div>
 
@@ -489,61 +510,171 @@ function load(){
 }
 
 /* ---------- rendering ---------- */
-const app=document.getElementById('app');
-let renderDirty=true;
+const screen=document.getElementById('screen');
 let built=false;
+let renderDirty=false;
+let curView='home';
 const el={}; // cache per-node elements
 
 function lineOrder(){ return ['si','al','re','pw','dc','soon']; }
+const MINES=['quartz','bauxite','reeore'];
+
+function mkView(id){ const v=document.createElement('div'); v.className='view'; v.id='view-'+id; return v; }
+function viewHead(title, hintLk){
+  const h=document.createElement('div'); h.className='viewhead';
+  h.innerHTML=`<button class="backbtn" aria-label="Home">‹</button><h2>${title}</h2>`+
+    (hintLk?`<span class="vhint" id="hint-${hintLk}"></span>`:'');
+  h.querySelector('.backbtn').onclick=()=>setView('home');
+  return h;
+}
+function buildLineCards(lk, listEl){
+  NODES.filter(n=>n.line===lk).forEach(n=>{
+    const card=document.createElement('div'); card.className='card'; card.id='card-'+n.id;
+    listEl.appendChild(card);
+    el[n.id]={card};
+  });
+}
+function lineSection(lk){
+  const sec=document.createElement('div'); sec.className='section';
+  sec.innerHTML=`<div class="sechead"><span class="dot" style="background:${LINES[lk].color}"></span><h2>${LINES[lk].name}</h2><span class="hint" id="hint-${lk}"></span></div>`;
+  const list=document.createElement('div'); list.id='list-'+lk; sec.appendChild(list);
+  buildLineCards(lk, list);
+  return sec;
+}
 
 function buildSkeleton(){
-  app.innerHTML='';
-  // Waste control section first (pinned meter is in topbar; controls here near top)
+  screen.innerHTML='';
+
+  /* ---------------- HOME ---------------- */
+  const home=mkView('home');
+  home.innerHTML=`
+    <div class="hero">
+      <h1>CHOKEPOINT</h1>
+      <div class="sub">Mining is cheap. Refining is the gate.</div>
+    </div>
+    <div class="dash">
+      <div class="dashmain">
+        <div class="dlabel">CREDITS</div>
+        <div class="dcredits" id="d-credits">$0</div>
+        <div class="dincome" id="d-income">$0/s</div>
+      </div>
+      <div class="statgrid">
+        <div class="stat"><div class="v" id="d-dc">0</div><div class="l">DC Capacity</div></div>
+        <div class="stat"><div class="v" id="d-gen">Gen 1</div><div class="l">Fab Gen</div></div>
+        <div class="stat"><div class="v" id="d-mult">×1.00</div><div class="l">Mult</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sechead"><span class="dot" style="background:var(--accent)"></span><h2>Tap to Extract</h2></div>
+      <div class="card">
+        <div id="home-taps" class="tapgrid"></div>
+        <div class="btnrow"><button class="btn buy" id="btn-tap"><span>Upgrade Drill Power</span><small id="tap-cost"></small></button></div>
+        <div class="ctier" style="margin-top:8px;text-align:center">Drill power <b id="tap-power">+1</b> per tap</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sechead"><span class="dot" style="background:var(--si)"></span><h2>Sections</h2></div>
+      <div class="grid" id="home-grid"></div>
+    </div>
+    <div class="footer">
+      <div class="row">
+        <button class="minibtn" id="btn-save">Save</button>
+        <button class="minibtn" id="btn-export">Export</button>
+        <button class="minibtn" id="btn-import">Import</button>
+        <button class="minibtn" id="btn-wipe">Reset</button>
+      </div>
+      <div class="note">Runs fully offline · auto-saves · earnings accrue while away (8h cap).</div>
+      <div id="debug"></div>
+    </div>`;
+  screen.appendChild(home);
+
+  // launcher grid
+  const grid=home.querySelector('#home-grid');
+  [
+    {v:'si',ic:'🔲',name:'Silicon',sub:'sub-si'},
+    {v:'al',ic:'🛢️',name:'Aluminium + Gallium',sub:'sub-al'},
+    {v:'re',ic:'🧲',name:'Rare Earth',sub:'sub-re'},
+    {v:'pw',ic:'⚡',name:'Power & Compute',sub:'sub-pw'},
+    {v:'waste',ic:'♻️',name:'Waste Control',sub:'sub-waste'},
+    {v:'prestige',ic:'✦',name:'Prestige',sub:'sub-prestige'},
+  ].forEach(g=>{
+    const b=document.createElement('button'); b.className='navcard'; b.dataset.view=g.v;
+    b.innerHTML=`<div class="ncico">${g.ic}</div><div class="ncname">${g.name}</div><div class="ncsub" id="${g.sub}"></div>`;
+    b.onclick=()=>setView(g.v);
+    grid.appendChild(b);
+  });
+
+  // home tap buttons (mines)
+  const taps=home.querySelector('#home-taps');
+  MINES.forEach(id=>{
+    const n=NODEMAP[id];
+    const b=document.createElement('button'); b.className='btn tap homtap'; b.id='homtap-'+id;
+    b.innerHTML=`${n.icon}<span>${resShort(id)}</span><small id="homtapst-${id}"></small>`;
+    b.addEventListener('click',(e)=>{e.preventDefault(); doTap(id);});
+    taps.appendChild(b);
+  });
+
+  /* ---------------- LINE VIEWS ---------------- */
+  [['si','Silicon'],['al','Aluminium + Gallium'],['re','Rare Earth']].forEach(([lk,title])=>{
+    const v=mkView(lk);
+    v.appendChild(viewHead(title, lk));
+    const list=document.createElement('div'); list.className='section'; list.id='list-'+lk;
+    buildLineCards(lk, list);
+    v.appendChild(list);
+    screen.appendChild(v);
+  });
+
+  // Power & Compute view (power + datacenter + coming soon)
+  const pv=mkView('pw');
+  pv.appendChild(viewHead('Power & Compute'));
+  ['pw','dc','soon'].forEach(lk=>pv.appendChild(lineSection(lk)));
+  screen.appendChild(pv);
+
+  /* ---------------- WASTE VIEW ---------------- */
+  const wv=mkView('waste');
+  wv.appendChild(viewHead('Waste Control'));
   const wsec=document.createElement('div'); wsec.className='section';
-  wsec.innerHTML = `
-    <div class="sechead"><span class="dot" style="background:var(--bad)"></span><h2>Waste Control</h2><span class="hint" id="waste-hint"></span></div>
+  wsec.innerHTML=`
     <div class="wctrl">
       <div class="big" id="waste-summary"></div>
       <div class="btnrow">
         <button class="btn buy" id="btn-remediation"><span>Treatment Plant</span><small id="rem-cost"></small></button>
         <button class="btn buy" id="btn-green"><span>Green Refit</span><small id="green-cost"></small></button>
       </div>
-    </div>`;
-  app.appendChild(wsec);
+    </div>
+    <div class="ctier" style="margin-top:10px;line-height:1.5">Every refining step emits waste, raising pollution and cutting efficiency. Treatment plants scrub pollution over time; green refits cut waste at the source.</div>`;
+  wv.appendChild(wsec);
+  screen.appendChild(wv);
 
-  // Tap booster card (drill power)
-  const tsec=document.createElement('div'); tsec.className='section';
-  tsec.innerHTML = `
-    <div class="sechead"><span class="dot" style="background:var(--accent)"></span><h2>Extraction Crew</h2></div>
-    <div class="card">
-      <div class="crow">
-        <div class="ico">👷</div>
-        <div><div class="cname">Drill Power</div><div class="ctier">Boost every manual tap on mining nodes</div></div>
-        <div class="cright"><div class="cstock" id="tap-power"></div><div class="crate">per tap</div></div>
-      </div>
-      <div class="btnrow"><button class="btn buy" id="btn-tap"><span>Upgrade Drill</span><small id="tap-cost"></small></button></div>
+  /* ---------------- PRESTIGE VIEW ---------------- */
+  const prv=mkView('prestige');
+  prv.appendChild(viewHead('Prestige'));
+  const psec=document.createElement('div'); psec.className='section';
+  psec.innerHTML=`
+    <div class="prestige">
+      <h3>NEW FAB GENERATION</h3>
+      <p>Retool the entire operation. Wipes all stock, machines, lines and pollution — but every datacenter you built this run forges <b>permanent</b> fab credits that compound your output forever.</p>
+      <p id="prestige-info">Build datacenter capacity to unlock.</p>
+      <button class="btn prestige-btn" id="prestige-btn" disabled>RETOOL</button>
     </div>`;
-  app.appendChild(tsec);
+  prv.appendChild(psec);
+  screen.appendChild(prv);
 
-  // node sections by line
-  for(const lk of lineOrder()){
-    const sec=document.createElement('div'); sec.className='section'; sec.id='sec-'+lk;
-    const li=LINES[lk];
-    sec.innerHTML=`<div class="sechead"><span class="dot" style="background:${li.color}"></span><h2>${li.name}</h2><span class="hint" id="hint-${lk}"></span></div>`;
-    const list=document.createElement('div'); list.id='list-'+lk;
-    sec.appendChild(list); app.appendChild(sec);
-    NODES.filter(n=>n.line===lk).forEach(n=>{
-      const card=document.createElement('div'); card.className='card'; card.id='card-'+n.id;
-      list.appendChild(card);
-      el[n.id]={card};
-    });
-  }
   built=true;
   bindStatic();
   renderAll();
+  setView(curView);
+}
+
+function setView(name){
+  curView=name;
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+name));
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('on', b.dataset.view===name));
+  window.scrollTo(0,0);
 }
 
 function bindStatic(){
+  document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>setView(b.dataset.view));
   document.getElementById('btn-tap').onclick=buyTap;
   document.getElementById('btn-remediation').onclick=buyRemediation;
   document.getElementById('btn-green').onclick=buyGreen;
@@ -648,16 +779,35 @@ function renderAll(){
 /* per-frame light update */
 let lastRate=0;
 function updateUI(){
-  // wallet
+  // wallet (topbar)
   document.getElementById('w-credits').textContent=money(S.credits);
   document.getElementById('w-dc').textContent=fmt(S.stock['datacenter'])+' DC capacity';
-  document.getElementById('s-income').textContent=money(lastRate)+'/s';
-  document.getElementById('s-gen').textContent='Gen '+S.gen;
-  document.getElementById('s-mult').textContent='×'+prestigeMult().toFixed(2);
+  // home dashboard
+  const setTxt=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+  setTxt('d-credits',money(S.credits));
+  setTxt('d-income',money(lastRate)+'/s');
+  setTxt('d-dc',fmt(S.stock['datacenter']));
+  setTxt('d-gen','Gen '+S.gen);
+  setTxt('d-mult','×'+prestigeMult().toFixed(2));
   // pollution bar
   const pr=Math.min(1,S.pollution/pollCap());
   document.getElementById('pollfill').style.width=(pr*100).toFixed(1)+'%';
   document.getElementById('polltxt').textContent='POLLUTION '+(pr*100).toFixed(0)+'% · EFF '+(efficiency()*100).toFixed(0)+'%';
+  // home tap buttons (show only unlocked mines, with live stock)
+  for(const id of MINES){
+    const b=document.getElementById('homtap-'+id); if(!b) continue;
+    if(S.unlocked[id]){ b.style.display=''; setTxt('homtapst-'+id, fmt(S.stock[id])); }
+    else b.style.display='none';
+  }
+  // launcher substats
+  const lineStat=(lks)=>{ let u=0,t=0; for(const lk of lks){ NODES.filter(n=>n.line===lk&&!n.soon).forEach(n=>{t++; if(S.unlocked[n.id])u++;}); } return u===0?'locked':u+'/'+t+' stages'; };
+  setTxt('sub-si',lineStat(['si']));
+  setTxt('sub-al',lineStat(['al']));
+  setTxt('sub-re',lineStat(['re']));
+  setTxt('sub-pw',lineStat(['pw','dc']));
+  setTxt('sub-waste',(pr*100).toFixed(0)+'% pollution');
+  const _g=ppGain();
+  setTxt('sub-prestige', _g>=1?('+'+_g+' ready'):('×'+prestigeMult().toFixed(2)));
   // waste section
   const ws=document.getElementById('waste-summary');
   if(ws){
