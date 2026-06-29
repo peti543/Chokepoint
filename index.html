@@ -67,8 +67,8 @@
 
   .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
     border-radius:14px;padding:12px;margin-bottom:10px;position:relative;overflow:hidden;}
-  .card.locked{opacity:.62;}
-  .card.soon{opacity:.5;}
+  .card.locked{opacity:.82;}
+  .card.soon{opacity:.72;}
   .card .crow{display:flex;align-items:center;gap:10px;}
   .ico{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;
     font-size:23px;flex:0 0 44px;background:#0e141a;border:1px solid var(--line);position:relative;
@@ -110,7 +110,7 @@
   .btn.buy{background:linear-gradient(180deg,#243140,#19222c);border-color:#34465a;}
   .btn.buy.afford{background:linear-gradient(180deg,#2f4a2f,#1d2e1d);border-color:#3d6b3d;}
   .btn.buy.afford small{color:#bfe9c4;}
-  .btn.buy:disabled{opacity:.5;}
+  .btn.buy:disabled{opacity:.62;}
   .btn.tap{flex:0 0 96px;background:linear-gradient(180deg,var(--accent),var(--accent2));color:#1a1200;border-color:#b87800;}
   .btn.clean{flex:0 0 96px;background:linear-gradient(180deg,#1c3b3b,#13282a);border-color:#2c5a5a;}
   .btn.clean small{color:#9fe9e9;}
@@ -539,7 +539,7 @@ function doTap(id){
   if(!n.root || !S.unlocked[id]) return;
   const amt = tapPower();
   S.stock[id]+=amt; S.produced[id]+=amt;
-  if(n.waste) S.pollution += amt*n.waste*wasteFactor();
+  // manual mining is clean: pollution comes from refining, not from tapping
   spawnPop(id, '+'+fmt(amt));
 }
 function buyNode(id){
