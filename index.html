@@ -70,8 +70,25 @@
   .card.locked{opacity:.62;}
   .card.soon{opacity:.5;}
   .card .crow{display:flex;align-items:center;gap:10px;}
-  .ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
-    font-size:22px;flex:0 0 38px;background:#0e141a;border:1px solid var(--line);}
+  .ico{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-size:23px;flex:0 0 44px;background:#0e141a;border:1px solid var(--line);position:relative;
+    color:inherit;padding:0;cursor:pointer;}
+  .ico:active{transform:scale(.94);}
+  .ico .ibadge{position:absolute;right:-5px;bottom:-5px;width:18px;height:18px;border-radius:50%;
+    background:var(--accent);color:#1a1200;font-size:11px;font-weight:900;display:flex;
+    align-items:center;justify-content:center;border:2px solid var(--bg2);font-style:italic;}
+
+  /* info modal */
+  .infosheet{text-align:left;}
+  .infohead{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .infoico{width:52px;height:52px;border-radius:12px;background:#0e141a;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:30px;flex:0 0 52px;}
+  .infoname{font-size:19px;font-weight:900;}
+  .infotier{font-size:11px;color:var(--dim2);text-transform:uppercase;letter-spacing:.5px;}
+  .infobody p{margin:0 0 10px;font-size:13px;line-height:1.55;color:var(--ink);}
+  .infobody .lbl{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+    color:var(--accent);font-weight:800;margin-bottom:2px;}
+  .infobody .real{color:var(--dim);font-style:italic;}
   .cname{font-weight:800;font-size:16px;line-height:1.1;}
   .ctier{font-size:11px;color:var(--dim2);letter-spacing:.5px;text-transform:uppercase;}
   .cright{margin-left:auto;text-align:right;}
@@ -225,6 +242,21 @@
   </div>
 </div>
 
+<div class="modal" id="info-modal">
+  <div class="sheet infosheet">
+    <div class="infohead">
+      <div class="infoico" id="info-ico">⛏️</div>
+      <div>
+        <div class="infoname" id="info-name">Quartz Mine</div>
+        <div class="infotier" id="info-tier">Mining</div>
+      </div>
+    </div>
+    <div class="infobody" id="info-body"></div>
+    <div class="gains" id="info-stats"></div>
+    <button class="ghost" id="info-close">CLOSE</button>
+  </div>
+</div>
+
 <script>
 "use strict";
 /* ============================================================
@@ -337,6 +369,70 @@ NODES.forEach(n=>NODEMAP[n.id]=n);
 const RESNAME = {gallium:'Gallium'};
 NODES.forEach(n=>RESNAME[n.id]=n.name);
 function resShort(id){ return (RESNAME[id]||id).split(' ')[0]; }
+
+// per-node explainer cards: what it is, what it does in the chain, a real-world note
+const INFO = {
+  quartz:{what:'High-purity quartz (SiO2), the raw rock every silicon chip begins as.',
+    does:'Mined fast and cheap. Its output feeds the furnace that makes metallurgical silicon.',
+    real:'Only a few deposits on Earth are pure enough for semiconductor use.'},
+  metsi:{what:'Metallurgical-grade silicon, roughly 98% pure.',
+    does:'Smelts quartz with carbon at about 2000C. The first refining step: hungry for power, emits CO2.',
+    real:'A large majority of the world’s metallurgical silicon is smelted in one country.'},
+  poly:{what:'Polysilicon, silicon purified to better than 99.9999999%.',
+    does:'Refines metallurgical silicon in the Siemens reactor. Slow and very energy-heavy, and it gives off SiCl4.',
+    real:'A handful of plants supply most of the world’s solar and chip-grade polysilicon.'},
+  ingot:{what:'A single, flawless silicon crystal (a boule).',
+    does:'Czochralski pulling grows one giant crystal from molten polysilicon. Extremely slow and power-heavy.',
+    real:'One boule can take days to grow and weigh hundreds of kilograms.'},
+  wafer:{what:'Thin, mirror-polished silicon wafers.',
+    does:'Slices the ingot into flat discs that circuits get printed onto.',
+    real:'Modern 300mm wafers are flatter than almost anything else humans manufacture.'},
+  chip:{what:'The finished semiconductor.',
+    does:'Prints circuits onto wafers. It also needs gallium, so you must run the aluminium line to make chips.',
+    real:'A single leading-edge chip fab can cost well over 20 billion dollars.'},
+  bauxite:{what:'Bauxite ore, the main source of aluminium.',
+    does:'Mined cheaply. Its output feeds the Bayer process that makes alumina.',
+    real:'Most bauxite is strip-mined in tropical regions.'},
+  alumina:{what:'Alumina (aluminium oxide), a fine white powder.',
+    does:'The Bayer process digests bauxite in hot caustic soda. Leaves behind toxic red-mud tailings.',
+    real:'Red mud is one of heavy industry’s largest waste-storage headaches.'},
+  aluminium:{what:'Pure aluminium metal, plus a gallium byproduct.',
+    does:'Hall-Heroult smelting runs huge electric current through molten alumina. It quietly recovers gallium, which chips need.',
+    real:'Smelters are so power-hungry they are often built beside their own power plants.'},
+  reeore:{what:'Rare-earth ore: a blend of 17 chemically near-identical metals.',
+    does:'Mined like any ore, but the metals inside are a nightmare to tell apart.',
+    real:'Rare earths are not actually rare. Separating them cleanly is the hard part.'},
+  leach:{what:'Pregnant leach solution loaded with dissolved rare earths.',
+    does:'Cracks and leaches the ore with strong acid. Waste is acidic and mildly radioactive.',
+    real:'The ore often carries thorium and uranium, which is where the radioactivity comes from.'},
+  sx:{what:'Separated rare-earth streams. This is THE CHOKEPOINT.',
+    does:'Solvent extraction repeats hundreds of stages to pull nearly identical elements apart. The slowest, costliest, dirtiest step in the whole game. Hold this and you hold everything.',
+    real:'A very small number of facilities do the bulk of the world’s rare-earth separation.'},
+  oxide:{what:'Individual, purified rare-earth oxides.',
+    does:'Calcines the separated streams into clean oxide powders.',
+    real:'Neodymium and praseodymium oxides are the ones that make strong magnets.'},
+  remetal:{what:'Rare-earth metals in solid form.',
+    does:'Molten-salt electrolysis reduces the oxides down to metal at high heat.',
+    real:'Carried out in fluoride salt baths at fierce temperatures.'},
+  magnet:{what:'Sintered NdFeB permanent magnets, the strongest made.',
+    does:'Alloys, mills, presses and sinters rare-earth metals into magnets for motors, drives and weapons.',
+    real:'These magnets sit inside nearly every EV motor and wind turbine.'},
+  power:{what:'Electricity generation.',
+    does:'Feeds the datacenter and stands in for the brutal energy appetite of refining and compute. Burns fuel, emits CO2.',
+    real:'Both heavy refining and AI compute are enormous electricity consumers.'},
+  datacenter:{what:'AI compute capacity, the very top of the chain.',
+    does:'Fuses chips, magnets and power into datacenter capacity, the currency your prestige multiplier scales.',
+    real:'This is what the entire supply chain ultimately exists to feed.'},
+  zinc:{what:'Zinc and germanium, a planned byproduct line.',
+    does:'Germanium would be recovered from zinc refining, much like gallium from aluminium.',
+    real:'Germanium is vital for fibre optics and infrared lenses.'},
+  graphite:{what:'Graphite anode material, planned.',
+    does:'Would feed the anodes of batteries.',
+    real:'Most battery-grade graphite is processed in a single country.'},
+  antimony:{what:'Antimony, planned.',
+    does:'Used in flame retardants, hardening alloys and munitions.',
+    real:'A classic strategic mineral with highly concentrated supply.'},
+};
 // who consumes each resource (for surplus-aware selling)
 const CONSUMERS = {};
 NODES.forEach(n=>(n.inputs||[]).forEach(inp=>{(CONSUMERS[inp.id]=CONSUMERS[inp.id]||[]).push(n.id);}));
@@ -675,6 +771,8 @@ function setView(name){
 
 function bindStatic(){
   document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+  document.getElementById('info-close').onclick=()=>document.getElementById('info-modal').classList.remove('show');
+  document.getElementById('info-modal').onclick=(e)=>{ if(e.target.id==='info-modal') e.currentTarget.classList.remove('show'); };
   document.getElementById('btn-tap').onclick=buyTap;
   document.getElementById('btn-remediation').onclick=buyRemediation;
   document.getElementById('btn-green').onclick=buyGreen;
@@ -692,7 +790,7 @@ function buildCard(n){
   const c=el[n.id].card;
   if(n.soon){
     c.className='card soon';
-    c.innerHTML=`<div class="crow"><div class="ico">${n.icon}</div>
+    c.innerHTML=`<div class="crow"><button class="ico" onclick="openInfo('${n.id}')">${n.icon}<span class="ibadge">i</span></button>
       <div><div class="cname">${n.name}</div><div class="ctier">${n.tier}</div></div></div>
       <div class="soonmsg">🔒 COMING SOON</div>`;
     el[n.id].built='soon';
@@ -704,7 +802,7 @@ function buildCard(n){
   const wasteTxt = n.waste?`<span class="chip" style="color:#ff9b6b">waste: ${n.wasteName||'tailings'}</span>`:'';
   c.innerHTML=`
     <div class="crow">
-      <div class="ico">${n.icon}</div>
+      <button class="ico" onclick="openInfo('${n.id}')">${n.icon}<span class="ibadge">i</span></button>
       <div style="min-width:0">
         <div class="cname">${n.name}</div>
         <div class="ctier">${n.tier}</div>
@@ -749,7 +847,7 @@ function buildLocked(n){
   const c=el[n.id].card;
   c.className='card locked';
   c.innerHTML=`
-    <div class="crow"><div class="ico">${n.icon}</div>
+    <div class="crow"><button class="ico" onclick="openInfo('${n.id}')">${n.icon}<span class="ibadge">i</span></button>
       <div><div class="cname">${n.name}</div><div class="ctier">${n.tier}</div></div></div>
     <div class="lockmsg" id="lock-${n.id}"></div>`;
   el[n.id].built='locked';
@@ -910,6 +1008,34 @@ function loop(now){
   if(uiAcc>=0.1){ updateUI(); uiAcc=0; }
   if(saveAcc>=10){ save(); saveAcc=0; }
   requestAnimationFrame(loop);
+}
+
+/* ---------- node info card ---------- */
+function openInfo(id){
+  const n=NODEMAP[id]; if(!n) return;
+  const info=INFO[id]||{};
+  document.getElementById('info-ico').textContent=n.icon;
+  document.getElementById('info-name').textContent=n.name;
+  document.getElementById('info-tier').textContent=n.tier||'';
+  let body='';
+  if(info.what) body+=`<p><span class="lbl">What it is</span>${info.what}</p>`;
+  if(info.does) body+=`<p><span class="lbl">What it does here</span>${info.does}</p>`;
+  if(info.real) body+=`<p class="real"><span class="lbl">Real world</span>${info.real}</p>`;
+  document.getElementById('info-body').innerHTML=body;
+  let stats='';
+  if(!n.soon){
+    stats+=`<div><span>Machines built</span><b>${fmt(S.nodes[id]||0)}</b></div>`;
+    stats+=`<div><span>In stock</span><b>${fmt(S.stock[id]||0)}</b></div>`;
+    if(n.inputs) n.inputs.forEach(inp=>stats+=`<div><span>Needs per unit</span><b>${inp.per} ${resShort(inp.id)}</b></div>`);
+    if(n.byproduct) stats+=`<div><span>Byproduct</span><b>${resShort(n.byproduct.id)}</b></div>`;
+    if(n.price) stats+=`<div><span>Sells for</span><b>${money(n.price)}</b></div>`;
+    if(n.waste) stats+=`<div><span>Waste</span><b>${n.wasteName||'tailings'}</b></div>`;
+    if(!S.unlocked[id]) stats+=`<div><span>Status</span><b style="color:var(--accent)">${unlockReqText(n).replace('🔒 ','')}</b></div>`;
+  } else {
+    stats+=`<div><span>Status</span><b style="color:var(--dim2)">Coming soon</b></div>`;
+  }
+  document.getElementById('info-stats').innerHTML=stats;
+  document.getElementById('info-modal').classList.add('show');
 }
 
 /* ---------- away modal ---------- */
