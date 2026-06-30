@@ -99,6 +99,9 @@
   .chip{font-size:11px;background:#0e141a;border:1px solid var(--line);color:var(--dim);
     padding:3px 7px;border-radius:20px;font-weight:600;}
   .chip b{color:var(--ink);}
+  .chipico{display:inline-flex;align-items:center;gap:3px;cursor:pointer;padding-top:5px;padding-bottom:5px;font-weight:700;color:var(--ink);}
+  .chipico .ci{font-size:17px;line-height:1;}
+  .chipico:active{transform:scale(.94);}
   .flowbar{height:5px;border-radius:4px;background:#0c1014;margin-top:8px;overflow:hidden;}
   .flowfill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .2s;}
   .btnrow{display:flex;gap:8px;margin-top:10px;}
@@ -374,10 +377,21 @@ const NODES = [
 ];
 const NODEMAP = {};
 NODES.forEach(n=>NODEMAP[n.id]=n);
-// resource display names (includes non-node byproduct resources like gallium)
+// resource display names + icons (includes non-node byproduct resources like gallium)
 const RESNAME = {gallium:'Gallium'};
 NODES.forEach(n=>RESNAME[n.id]=n.name);
 function resShort(id){ return (RESNAME[id]||id).split(' ')[0]; }
+const RESICON = {gallium:'🔷'};
+NODES.forEach(n=>RESICON[n.id]=n.icon);
+function resIcon(id){ return RESICON[id] || '▫'; }
+// short label for a material's product (not the machine): used under icons
+const RESLABEL = {
+  quartz:'Quartz', metsi:'Met-Si', poly:'Polysilicon', ingot:'Ingot', wafer:'Wafer', chip:'Chip',
+  bauxite:'Bauxite', alumina:'Alumina', aluminium:'Aluminium', gallium:'Gallium',
+  reeore:'REE Ore', leach:'Leachate', sx:'Separated', oxide:'Oxides', remetal:'RE Metal', magnet:'Magnet',
+  power:'Power', datacenter:'Compute',
+};
+function resLabel(id){ return RESLABEL[id] || resShort(id); }
 
 // per-node explainer cards: what it is, what it does in the chain, a real-world note
 const INFO = {
@@ -387,6 +401,9 @@ const INFO = {
   metsi:{what:'Metallurgical-grade silicon, roughly 98% pure.',
     does:'Smelts quartz with carbon at about 2000C. The first refining step: hungry for power, emits CO2.',
     real:'A large majority of the world’s metallurgical silicon is smelted in one country.'},
+  gallium:{what:'Gallium, a soft silvery metal that melts in your hand.',
+    does:'Recovered as a byproduct of aluminium smelting, so it only flows while you run aluminium. Chips need it.',
+    real:'Almost all of the world’s gallium comes out of one country as an aluminium byproduct.'},
   poly:{what:'Polysilicon, silicon purified to better than 99.9999999%.',
     does:'Refines metallurgical silicon in the Siemens reactor. Slow and very energy-heavy, and it gives off SiCl4.',
     real:'A handful of plants supply most of the world’s solar and chip-grade polysilicon.'},
@@ -853,9 +870,11 @@ function buildCard(n){
     el[n.id].built='soon';
     return;
   }
-  const inputsTxt = (n.inputs||[]).map(i=>`<span class="chip">in: <b>${i.per}</b> ${resShort(i.id)}</span>`).join('');
+  const inputsTxt = (n.inputs&&n.inputs.length)
+    ? `<span class="chip" style="color:var(--dim2)">needs</span>`+n.inputs.map(i=>`<span class="chip chipico" onclick="openInfo('${i.id}')" title="${resLabel(i.id)}"><span class="ci">${resIcon(i.id)}</span>×${i.per}</span>`).join('')
+    : '';
   const priceTxt = n.price?`<span class="chip">sell <b>${money(n.price)}</b></span>`:'';
-  const byTxt = n.byproduct?`<span class="chip" style="color:var(--si)">+gallium byproduct</span>`:'';
+  const byTxt = n.byproduct?`<span class="chip chipico" onclick="openInfo('${n.byproduct.id}')" title="${resLabel(n.byproduct.id)}"><span class="ci">${resIcon(n.byproduct.id)}</span> +by</span>`:'';
   const wasteTxt = n.waste?`<span class="chip" style="color:#ff9b6b">waste: ${n.wasteName||'tailings'}</span>`:'';
   c.innerHTML=`
     <div class="crow">
@@ -1108,22 +1127,26 @@ function loop(now){
 
 /* ---------- node info card ---------- */
 function openInfo(id){
-  const n=NODEMAP[id]; if(!n) return;
+  const n=NODEMAP[id];                 // may be undefined for byproduct-only materials (gallium)
   const info=INFO[id]||{};
-  document.getElementById('info-ico').textContent=n.icon;
-  document.getElementById('info-name').textContent=n.name;
-  document.getElementById('info-tier').textContent=n.tier||'';
+  document.getElementById('info-ico').textContent = n?n.icon:resIcon(id);
+  document.getElementById('info-name').textContent = n?n.name:(RESNAME[id]||id);
+  document.getElementById('info-tier').textContent = n?(n.tier||''):'Byproduct material';
   let body='';
   if(info.what) body+=`<p><span class="lbl">What it is</span>${info.what}</p>`;
   if(info.does) body+=`<p><span class="lbl">What it does here</span>${info.does}</p>`;
   if(info.real) body+=`<p class="real"><span class="lbl">Real world</span>${info.real}</p>`;
   document.getElementById('info-body').innerHTML=body;
   let stats='';
-  if(!n.soon){
+  if(!n){
+    // byproduct material (e.g. gallium): no machine, just stock
+    stats+=`<div><span>In stock</span><b>${fmt(S.stock[id]||0)}</b></div>`;
+    stats+=`<div><span>Source</span><b>Aluminium byproduct</b></div>`;
+  } else if(!n.soon){
     stats+=`<div><span>Machines built</span><b>${fmt(S.nodes[id]||0)}</b></div>`;
     stats+=`<div><span>In stock</span><b>${fmt(S.stock[id]||0)}</b></div>`;
-    if(n.inputs) n.inputs.forEach(inp=>stats+=`<div><span>Needs per unit</span><b>${inp.per} ${resShort(inp.id)}</b></div>`);
-    if(n.byproduct) stats+=`<div><span>Byproduct</span><b>${resShort(n.byproduct.id)}</b></div>`;
+    if(n.inputs) n.inputs.forEach(inp=>stats+=`<div><span>Needs per unit</span><b>${inp.per} ${resLabel(inp.id)}</b></div>`);
+    if(n.byproduct) stats+=`<div><span>Byproduct</span><b>${resLabel(n.byproduct.id)}</b></div>`;
     if(n.isDC) stats+=`<div><span>Earns</span><b>${money(DC_REV)}/s per capacity</b></div>`;
     else if(n.price){ stats+=`<div><span>Sells for</span><b>${money(n.price)} each</b></div>`;
       stats+=`<div><span>Auto-sell</span><b style="color:${S.autosell[id]?'var(--good)':'var(--dim2)'}">${S.autosell[id]?'ON':'OFF'}</b></div>`; }
