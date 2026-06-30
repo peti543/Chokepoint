@@ -192,6 +192,15 @@
   .homtap{flex:1;min-width:92px;flex-direction:column;gap:2px;}
   .homtap span{font-size:12px;}
   .homtap small{color:#5a3f00;font-weight:700;}
+  .drillrow{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+
+  /* sell + auto controls on cards */
+  .sellrow{display:flex;gap:8px;margin-top:8px;}
+  .btn.sell{flex:1;background:linear-gradient(180deg,#2f3a22,#212a16);border-color:#4a5a30;min-height:44px;}
+  .btn.sell.has small{color:#cfe9a0;}
+  .btn.sell:disabled{opacity:.5;}
+  .btn.autobtn{flex:0 0 92px;min-height:44px;background:var(--panel2);border-color:var(--line);color:var(--dim);}
+  .btn.autobtn.on{background:linear-gradient(180deg,#1d3a2a,#15291f);border-color:#2f6a4a;color:#9fe9c4;}
 
   /* bottom nav */
   #bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;
@@ -438,32 +447,35 @@ const CONSUMERS = {};
 NODES.forEach(n=>(n.inputs||[]).forEach(inp=>{(CONSUMERS[inp.id]=CONSUMERS[inp.id]||[]).push(n.id);}));
 
 /* ---------- balance constants ---------- */
-const SELL_FRAC = 0.5;        // fraction of surplus stock sold per second
+const SELL_FRAC = 0.5;        // fraction of stock auto-sold per second (when auto on)
 const POLL_CAP_BASE = 1000;
 const OFFLINE_CAP = 8*3600;   // seconds
 const PRESTIGE_SCALE = 1;     // pp = floor( runDC ^ 0.55 )
 const PRESTIGE_EXP = 0.55;
 const PRESTIGE_PER_POINT = 0.25; // +25% per fab credit
+const MINES = ['quartz','bauxite','reeore'];
+const DC_REV = 30000;         // $/s of revenue per unit of datacenter capacity
 
 /* ---------- state ---------- */
 function freshState(){
   const s = {
-    v:1, credits:0, lastSave:Date.now(),
+    v:2, credits:0, lastSave:Date.now(),
     pollution:0, remediationLvl:0, greenLvl:0,
-    tapLvl:0,
+    tapLvls:{}, autosell:{},
     totalPP:0, gen:1, runDC:0,
     nodes:{}, stock:{}, unlocked:{}, produced:{},
   };
   NODES.forEach(n=>{ s.nodes[n.id]=0; s.stock[n.id]=0; s.produced[n.id]=0; });
   s.stock['gallium']=0; s.produced['gallium']=0; // byproduct resource (not a node)
+  MINES.forEach(id=>{ s.tapLvls[id]=0; s.autosell[id]=true; }); // raw ore auto-sells by default
   s.unlocked['quartz']=true;
   return s;
 }
 let S = freshState();
 
 /* derived helpers */
-function tapPower(){ return Math.pow(1.6, S.tapLvl) * (1 + S.tapLvl*0.2); }
-function tapCost(){ return Math.floor(10 * Math.pow(1.9, S.tapLvl)); }
+function tapPower(id){ const l=(S.tapLvls&&S.tapLvls[id])||0; return Math.pow(1.6, l) * (1 + l*0.2); }
+function tapCost(id){ const l=(S.tapLvls&&S.tapLvls[id])||0; const base=Math.max(10, NODEMAP[id].cost*0.2); return Math.floor(base * Math.pow(1.9, l)); }
 function pollCap(){ return POLL_CAP_BASE * (1 + S.remediationLvl*0.5); }
 function remediationRate(){ return S.remediationLvl===0?0: (POLL_CAP_BASE*0.02) * Math.pow(1.4,S.remediationLvl-1); }
 function remediationCost(){ return Math.floor(2000 * Math.pow(2.2, S.remediationLvl)); }
@@ -504,11 +516,13 @@ function tick(dt){
   // remediation
   if(S.remediationLvl>0){ S.pollution = Math.max(0, S.pollution - remediationRate()*dt); }
   S.pollution = Math.max(0, Math.min(S.pollution, pollCap()*1.05));
-  // selling pass: sell surplus (stock not immediately needed downstream)
+  // income pass: datacenter capacity earns rent; materials only sell if auto-sell is on
   let income = 0;
+  // datacenter capacity generates revenue without being consumed
+  if(S.stock['datacenter']>0){ income += S.stock['datacenter'] * DC_REV * gm * dt; }
   for(const n of NODES){
-    if(n.soon) continue;
-    if(!n.price) continue;
+    if(n.soon || n.isDC) continue;
+    if(!n.price || !S.autosell[n.id]) continue;
     const st = S.stock[n.id];
     if(st<=0) continue;
     const sell = Math.min(st, st*SELL_FRAC*dt);
@@ -517,6 +531,27 @@ function tick(dt){
   }
   S.credits += income;
   return income/dt; // $/s
+}
+
+/* sell the full stock of one material right now */
+function sellNode(id){
+  const n=NODEMAP[id]; if(!n || !n.price || n.isDC) return 0;
+  const st=S.stock[id]; if(st<=0) return 0;
+  const v=st*n.price*prestigeMult();
+  S.stock[id]=0; S.credits+=v;
+  return v;
+}
+function sellAll(){
+  let total=0;
+  for(const n of NODES){ if(n.soon||n.isDC||!n.price) continue; total+=sellNode(n.id); }
+  if(total>0) toast('Sold everything for '+money(total));
+  renderDirty=true;
+}
+function toggleAuto(id){ S.autosell[id]=!S.autosell[id]; renderDirty=true; }
+function inventoryValue(){
+  let v=0; const gm=prestigeMult();
+  for(const n of NODES){ if(n.soon||n.isDC||!n.price) continue; v+=S.stock[n.id]*n.price*gm; }
+  return v;
 }
 
 /* unlock check */
@@ -537,7 +572,7 @@ function checkUnlocks(){
 function doTap(id){
   const n=NODEMAP[id];
   if(!n.root || !S.unlocked[id]) return;
-  const amt = tapPower();
+  const amt = tapPower(id);
   S.stock[id]+=amt; S.produced[id]+=amt;
   // manual mining is clean: pollution comes from refining, not from tapping
   spawnPop(id, '+'+fmt(amt));
@@ -547,7 +582,7 @@ function buyNode(id){
   if(S.credits<c) return false;
   S.credits-=c; S.nodes[id]++; renderDirty=true; return true;
 }
-function buyTap(){ const c=tapCost(); if(S.credits<c) return; S.credits-=c; S.tapLvl++; renderDirty=true; }
+function buyTap(id){ const c=tapCost(id); if(S.credits<c) return; S.credits-=c; S.tapLvls[id]=(S.tapLvls[id]||0)+1; renderDirty=true; }
 function buyRemediation(){ const c=remediationCost(); if(S.credits<c) return; S.credits-=c; S.remediationLvl++; renderDirty=true; toast('Treatment capacity expanded'); }
 function buyGreen(){ const c=greenCost(); if(S.credits<c) return; S.credits-=c; S.greenLvl++; renderDirty=true; toast('Green refit installed, waste cut'); }
 
@@ -569,7 +604,7 @@ function applyOffline(){
   let elapsed=(now - (S.lastSave||now))/1000;
   if(elapsed<5) return null;
   elapsed=Math.min(elapsed, OFFLINE_CAP);
-  const before={credits:S.credits, dc:S.runDC};
+  const before={credits:S.credits, dc:S.runDC, inv:inventoryValue()};
   const STEPS=600;
   const dt=elapsed/STEPS;
   for(let i=0;i<STEPS;i++){ tick(dt); }
@@ -577,6 +612,7 @@ function applyOffline(){
   const gained={
     credits:S.credits-before.credits,
     dc:S.runDC-before.dc,
+    inv:inventoryValue()-before.inv,
     seconds:elapsed
   };
   return gained;
@@ -601,6 +637,13 @@ function load(){
     if(S.stock['gallium']==null) S.stock['gallium']=0;
     if(S.produced['gallium']==null) S.produced['gallium']=0;
     S.unlocked = Object.assign({quartz:true}, data.unlocked||{});
+    // migrate selling / drills (saves from before the storage update)
+    if(!S.tapLvls){ S.tapLvls={}; }
+    if(!S.autosell){ S.autosell={}; }
+    MINES.forEach(id=>{
+      if(S.tapLvls[id]==null) S.tapLvls[id]= (data.tapLvl||0); // old single drill applied to each mine
+      if(S.autosell[id]==null) S.autosell[id]=true;
+    });
     return true;
   }catch(e){ return false; }
 }
@@ -613,7 +656,6 @@ let curView='home';
 const el={}; // cache per-node elements
 
 function lineOrder(){ return ['si','al','re','pw','dc','soon']; }
-const MINES=['quartz','bauxite','reeore'];
 
 function mkView(id){ const v=document.createElement('div'); v.className='view'; v.id='view-'+id; return v; }
 function viewHead(title, hintLk){
@@ -664,8 +706,15 @@ function buildSkeleton(){
       <div class="sechead"><span class="dot" style="background:var(--accent)"></span><h2>Tap to Extract</h2></div>
       <div class="card">
         <div id="home-taps" class="tapgrid"></div>
-        <div class="btnrow"><button class="btn buy" id="btn-tap"><span>Upgrade Drill Power</span><small id="tap-cost"></small></button></div>
-        <div class="ctier" style="margin-top:8px;text-align:center">Drill power <b id="tap-power">+1</b> per tap</div>
+        <div id="home-drills" class="drillrow"></div>
+        <div class="ctier" style="margin-top:8px;text-align:center">Each mine has its own drill. Upgrading boosts that mine's tap yield only.</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sechead"><span class="dot" style="background:var(--good)"></span><h2>Inventory &amp; Sales</h2></div>
+      <div class="card">
+        <div class="big" style="font-size:13px;color:var(--dim);line-height:1.5">Stored materials are worth <b id="inv-value" style="color:var(--good)">$0</b>. Sell raw and refined goods from each section, or dump it all here. Toggle <b>Auto</b> on a material to keep selling it while you are away.</div>
+        <div class="btnrow"><button class="btn buy" id="btn-sellall"><span>SELL ALL MATERIALS</span><small id="sellall-sub">raw + refined</small></button></div>
       </div>
     </div>
     <div class="section">
@@ -708,6 +757,14 @@ function buildSkeleton(){
     b.innerHTML=`${n.icon}<span>${resShort(id)}</span><small id="homtapst-${id}"></small>`;
     b.addEventListener('click',(e)=>{e.preventDefault(); doTap(id);});
     taps.appendChild(b);
+  });
+  // per-mine drill upgrades
+  const drills=home.querySelector('#home-drills');
+  MINES.forEach(id=>{
+    const b=document.createElement('button'); b.className='btn buy homdrill'; b.id='homdrill-'+id;
+    b.innerHTML=`<span>${resShort(id)} Drill</span><small id="homdrillc-${id}"></small>`;
+    b.onclick=()=>buyTap(id);
+    drills.appendChild(b);
   });
 
   /* ---------------- LINE VIEWS ---------------- */
@@ -773,7 +830,7 @@ function bindStatic(){
   document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>setView(b.dataset.view));
   document.getElementById('info-close').onclick=()=>document.getElementById('info-modal').classList.remove('show');
   document.getElementById('info-modal').onclick=(e)=>{ if(e.target.id==='info-modal') e.currentTarget.classList.remove('show'); };
-  document.getElementById('btn-tap').onclick=buyTap;
+  document.getElementById('btn-sellall').onclick=sellAll;
   document.getElementById('btn-remediation').onclick=buyRemediation;
   document.getElementById('btn-green').onclick=buyGreen;
   document.getElementById('prestige-btn').onclick=()=>{
@@ -832,6 +889,20 @@ function buildCard(n){
   buy.innerHTML=`<span>Build machine</span><small id="bc-${n.id}"></small>`;
   buy.onclick=()=>{ if(buyNode(n.id)) {} };
   row.appendChild(buy);
+  // sell + auto-sell row (every sellable material, raw or refined; not the datacenter)
+  if(n.price && !n.isDC){
+    const sr=document.createElement('div'); sr.className='sellrow';
+    const sell=document.createElement('button'); sell.className='btn sell'; sell.id='sell-'+n.id;
+    sell.innerHTML=`<span>Sell</span><small id="sellv-${n.id}"></small>`;
+    sell.onclick=()=>{ const v=sellNode(n.id); if(v>0){ toast('Sold '+resShort(n.id)+' for '+money(v)); renderDirty=true; updateUI(); } };
+    const auto=document.createElement('button'); auto.className='btn autobtn'; auto.id='auto-'+n.id;
+    auto.innerHTML=`Auto<small id="autol-${n.id}">off</small>`;
+    auto.onclick=()=>{ toggleAuto(n.id); updateUI(); };
+    sr.appendChild(sell); sr.appendChild(auto);
+    c.appendChild(sr);
+    el[n.id].sell=sell; el[n.id].sellv=c.querySelector('#sellv-'+n.id);
+    el[n.id].auto=auto; el[n.id].autol=c.querySelector('#autol-'+n.id);
+  }
   el[n.id].built='full';
   // cache refs
   el[n.id].st=c.querySelector('#st-'+n.id);
@@ -914,9 +985,22 @@ function updateUI(){
     setBuy(document.getElementById('btn-remediation'),'rem-cost',remediationCost(),'Lvl '+S.remediationLvl);
     setBuy(document.getElementById('btn-green'),'green-cost',greenCost(),'Lvl '+S.greenLvl);
   }
-  // tap
-  document.getElementById('tap-power').textContent='+'+fmt(tapPower());
-  setBuy(document.getElementById('btn-tap'),'tap-cost',tapCost(),'Lvl '+S.tapLvl);
+  // home per-mine drills
+  for(const id of MINES){
+    const b=document.getElementById('homdrill-'+id); if(!b) continue;
+    if(!S.unlocked[id]){ b.style.display='none'; continue; }
+    b.style.display='';
+    const lvl=(S.tapLvls&&S.tapLvls[id])||0, cost=tapCost(id), aff=S.credits>=cost;
+    const sm=document.getElementById('homdrillc-'+id);
+    if(sm) sm.textContent=money(cost)+' · Lv'+lvl+' · +'+fmt(tapPower(id))+'/tap';
+    b.classList.toggle('afford',aff); b.disabled=!aff;
+  }
+  // inventory value + sell all
+  const inv=inventoryValue();
+  setTxt('inv-value', money(inv));
+  const sa=document.getElementById('btn-sellall');
+  if(sa){ const has=inv>0.0001; sa.classList.toggle('afford',has); sa.disabled=!has;
+    const sub=document.getElementById('sellall-sub'); if(sub) sub.textContent= has?('+'+money(inv)):'nothing stored'; }
 
   // nodes
   for(const n of NODES){
@@ -947,6 +1031,18 @@ function updateUI(){
       for(const inp of n.inputs){ f=Math.min(f, S.stock[inp.id]/(inp.per*Math.max(1,S.nodes[n.id]*n.rate))); }
       e.fl.style.width=(Math.max(0,Math.min(1,f))*100).toFixed(0)+'%';
     } else { e.fl.style.width='100%'; }
+    // sell + auto controls
+    if(e.sell){
+      const st=S.stock[n.id], val=st*n.price*gm;
+      e.sellv.textContent = st>0 ? ('+'+money(val)) : 'empty';
+      e.sell.classList.toggle('has', st>0);
+      e.sell.disabled = st<=0;
+    }
+    if(e.auto){
+      const on=!!S.autosell[n.id];
+      e.auto.classList.toggle('on',on);
+      e.autol.textContent = on?'on':'off';
+    }
   }
   // line hints (next unlock)
   for(const lk of lineOrder()){
@@ -1028,7 +1124,9 @@ function openInfo(id){
     stats+=`<div><span>In stock</span><b>${fmt(S.stock[id]||0)}</b></div>`;
     if(n.inputs) n.inputs.forEach(inp=>stats+=`<div><span>Needs per unit</span><b>${inp.per} ${resShort(inp.id)}</b></div>`);
     if(n.byproduct) stats+=`<div><span>Byproduct</span><b>${resShort(n.byproduct.id)}</b></div>`;
-    if(n.price) stats+=`<div><span>Sells for</span><b>${money(n.price)}</b></div>`;
+    if(n.isDC) stats+=`<div><span>Earns</span><b>${money(DC_REV)}/s per capacity</b></div>`;
+    else if(n.price){ stats+=`<div><span>Sells for</span><b>${money(n.price)} each</b></div>`;
+      stats+=`<div><span>Auto-sell</span><b style="color:${S.autosell[id]?'var(--good)':'var(--dim2)'}">${S.autosell[id]?'ON':'OFF'}</b></div>`; }
     if(n.waste) stats+=`<div><span>Waste</span><b>${n.wasteName||'tailings'}</b></div>`;
     if(!S.unlocked[id]) stats+=`<div><span>Status</span><b style="color:var(--accent)">${unlockReqText(n).replace('🔒 ','')}</b></div>`;
   } else {
@@ -1043,6 +1141,7 @@ function showAway(g){
   const fmtTime=(s)=>{ s=Math.floor(s); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return (h?h+'h ':'')+m+'m'; };
   document.getElementById('away-time').innerHTML=`You were away <b>${fmtTime(g.seconds)}</b>. The refineries kept running.`;
   let rows=`<div><span>Credits earned</span><b>${money(g.credits)}</b></div>`;
+  if(g.inv>0.001) rows+=`<div><span>Materials stockpiled</span><b>+${money(g.inv)} value</b></div>`;
   if(g.dc>0.001) rows+=`<div><span>Datacenter capacity</span><b>+${fmt(g.dc)}</b></div>`;
   document.getElementById('away-gains').innerHTML=rows;
   const m=document.getElementById('away-modal'); m.classList.add('show');
@@ -1068,7 +1167,7 @@ function boot(){
   if(loaded){ away=applyOffline(); }
   buildSkeleton();
   initDebug();
-  if(away && away.credits>0.01){ showAway(away); }
+  if(away && (away.credits>0.01 || away.inv>0.01)){ showAway(away); }
   // persistence on leave
   const persist=()=>save();
   document.addEventListener('visibilitychange',()=>{ if(document.hidden) persist(); });

@@ -37,7 +37,12 @@ the top currency the prestige multiplier scales.
 ### Core systems
 
 - **Idle accrual:** stages produce per second while you play *and* while the app
-  is closed. Tap mining nodes to bootstrap, then buy machines to automate.
+  is closed. Tap mining nodes to bootstrap, then buy machines to automate. Each
+  mine has its own drill upgrade.
+- **Storage and selling:** materials accumulate in stock instead of instantly
+  becoming cash. Sell raw or refined goods by hand for a lump sum, or toggle
+  Auto-sell per material for passive income. Raw ore auto-sells by default; the
+  datacenter earns rent from its capacity rather than being sold.
 - **Waste meter (a real cost, not decoration):** every refining step emits waste
   (radioactive residue + acid from rare-earth separation; high energy + SiCl₄
   from silicon; CO₂, tailings, acid in general). Pollution drops your efficiency.
